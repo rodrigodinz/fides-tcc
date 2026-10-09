@@ -1,32 +1,59 @@
 """Seeds iniciais do FIDES.
 
-Os seeds são idempotentes: rodar duas vezes não duplica registros.
-O conteúdo religioso aqui é inicial/demonstrativo e deve ser revisado e
-ampliado pelo painel administrativo (US18-US22).
+Uso (a partir da raiz do repositório):
 
-Variáveis de ambiente opcionais:
-    FIDES_ADMIN_EMAIL, FIDES_ADMIN_PASSWORD
+    python -m database.seeds                          # cria tabelas (se faltarem) e popula
+    python -m database.seeds --redefinir-senha-admin  # idem, e regrava a senha do admin
+    python -m database.seeds --reset                  # DESTRUTIVO: apaga TODAS as tabelas e dados
+
+Política dos seeds
+------------------
+* Criação de tabelas e inserção de dados são etapas distintas
+  (``criar_tabelas()`` x ``executar_seeds()``).
+* Idempotentes: registros já existentes não são duplicados nem recriados.
+* Atualizações controladas (as ÚNICAS que alteram registros existentes):
+    1. ``Oracao.basica`` é alinhada às listas ORACOES_BASICAS / ORACOES_COMPLEMENTARES;
+    2. o santo gravado como "Santa Teresa de Ávila" (grafia da versão anterior) é
+       renomeado para "Santa Teresa d'Ávila" (mesmo registro, sem duplicar), e o
+       autor do livro correspondente acompanha;
+    3. administrador da versão anterior (sem login) recebe o login configurado,
+       mantendo a senha que já possuía.
+* Associações a momentos do dia só são ACRESCENTADAS, nunca removidas.
+* Tudo roda em uma única transação: se algo falhar, nada é gravado (rollback).
+* O conteúdo religioso é inicial e deve ser revisado/ampliado pelo painel
+  administrativo (US18-US22).
+
+Variáveis de ambiente (opcionais):
+    FIDES_ADMIN_LOGIN     login do administrador (padrão de desenvolvimento: "adm")
+    FIDES_ADMIN_SENHA     senha do administrador (nome principal)
+    FIDES_ADMIN_PASSWORD  alias de compatibilidade; só vale se FIDES_ADMIN_SENHA
+                          não estiver definida
+    FIDES_ADMIN_EMAIL     e-mail opcional do administrador (também aceito no login)
 """
 import argparse
 import os
+import warnings
 
-from sqlalchemy import select
+from sqlalchemy import inspect, select, text
 
-from .connection import SessionLocal, apagar_tabelas, criar_tabelas
+from .connection import DATABASE_URL, SessionLocal, apagar_tabelas, criar_tabelas
 from .models import (
     Administrador,
     BlocoMomento,
     Livro,
     MomentoDia,
     Novena,
-    DiaNovena,
     Oracao,
     Santo,
 )
 
+LOGIN_PADRAO_DEV = "adm"
+SENHA_PADRAO_DEV = "senha"  # SOMENTE desenvolvimento/MVP; troque antes de publicar.
+
 # --------------------------------------------------------------------------- #
 # Conteúdo
 # --------------------------------------------------------------------------- #
+# Orações BÁSICAS do catálogo (oração geral, sem santo). Textos preservados.
 ORACOES_BASICAS = [
     {
         "titulo": "Pai Nosso",
@@ -49,6 +76,14 @@ ORACOES_BASICAS = [
         "momentos": [BlocoMomento.AO_ACORDAR, BlocoMomento.ANTES_DE_DORMIR],
     },
     {
+        "titulo": "Glória ao Pai",
+        "texto": (
+            "Glória ao Pai, ao Filho e ao Espírito Santo, como era no princípio, agora e "
+            "sempre, e pelos séculos dos séculos. Amém."
+        ),
+        "momentos": [],
+    },
+    {
         "titulo": "Credo",
         "texto": (
             "Creio em Deus Pai todo-poderoso, Criador do céu e da terra. E em Jesus Cristo, "
@@ -63,6 +98,18 @@ ORACOES_BASICAS = [
         "momentos": [BlocoMomento.MISSA],
     },
     {
+        "titulo": "Santo Anjo",
+        "texto": (
+            "Santo Anjo do Senhor, meu zeloso guardador, se a ti me confiou a piedade divina, "
+            "sempre me rege, guarda, governa e ilumina. Amém."
+        ),
+        "momentos": [BlocoMomento.ANTES_DE_DORMIR],
+    },
+]
+
+# Orações COMPLEMENTARES (gerais, não básicas). Textos existentes preservados.
+ORACOES_COMPLEMENTARES = [
+    {
         "titulo": "Invocação ao Espírito Santo",
         "texto": (
             "Vinde, Espírito Santo, enchei os corações dos vossos fiéis e acendei neles o "
@@ -73,10 +120,20 @@ ORACOES_BASICAS = [
         ),
         "momentos": [BlocoMomento.AO_ACORDAR],
     },
-]
-
-# Orações de momentos específicos (não "básicas")
-ORACOES_MOMENTOS = [
+    {
+        # Começo exigido: "São Miguel Arcanjo, defendei-nos no combate..." (conferido em
+        # fontes católicas). O trecho final é a forma tradicional breve atribuída a
+        # Leão XIII e deve ser revisado pelo desenvolvedor (ver relatório).
+        "titulo": "Oração a São Miguel Arcanjo",
+        "texto": (
+            "São Miguel Arcanjo, defendei-nos no combate, sede o nosso refúgio contra as "
+            "maldades e ciladas do demônio. Ordene-lhe Deus, instantemente o pedimos, e vós, "
+            "príncipe da milícia celeste, pela virtude divina, precipitai no inferno a "
+            "satanás e a todos os espíritos malignos, que andam pelo mundo para perder as "
+            "almas. Amém."
+        ),
+        "momentos": [],
+    },
     {
         "titulo": "Oferecimento do dia",
         "texto": (
@@ -106,14 +163,6 @@ ORACOES_MOMENTOS = [
             "Pelos séculos dos séculos. Amém."
         ),
         "momentos": [BlocoMomento.MISSA],
-    },
-    {
-        "titulo": "Santo Anjo",
-        "texto": (
-            "Santo Anjo do Senhor, meu zeloso guardador, se a ti me confiou a piedade divina, "
-            "sempre me rege, guarda, governa e ilumina. Amém."
-        ),
-        "momentos": [BlocoMomento.ANTES_DE_DORMIR],
     },
 ]
 
@@ -155,7 +204,7 @@ SANTOS = [
         ),
     },
     {
-        "nome": "Santa Teresa de Ávila",
+        "nome": "Santa Teresa d'Ávila",
         "foto_url": "/static/santos/teresa-de-avila.jpg",
         "biografia": (
             "Carmelita espanhola (1515–1582), reformadora do Carmelo e mestra da vida de "
@@ -167,7 +216,7 @@ SANTOS = [
 
 ORACOES_SANTOS = [
     {
-        "santo": "Santa Teresa de Ávila",
+        "santo": "Santa Teresa d'Ávila",
         "titulo": "Nada te perturbe",
         "texto": (
             "Nada te perturbe, nada te espante. Tudo passa, só Deus não muda. A paciência "
@@ -187,8 +236,8 @@ ORACOES_SANTOS = [
 LIVROS = [
     {
         "titulo": "As Moradas (O Castelo Interior)",
-        "autor": "Santa Teresa de Ávila",
-        "santo": "Santa Teresa de Ávila",
+        "autor": "Santa Teresa d'Ávila",
+        "santo": "Santa Teresa d'Ávila",
         "resumo": "Descreve a vida de oração como a travessia de sete moradas no castelo interior da alma.",
         "contexto_historico": "Escrito em 1577, a pedido de superiores, já na maturidade espiritual da autora.",
     },
@@ -221,6 +270,20 @@ LIVROS = [
         "contexto_historico": "Publicado em 1939, a partir de um texto anterior de 1934.",
     },
     {
+        "titulo": "Teologia do Corpo",
+        "autor": "São João Paulo II",
+        "santo": None,
+        "resumo": "Conjunto de catequeses de São João Paulo II sobre o amor humano no plano divino, proferidas nas audiências gerais de quarta-feira.",
+        "contexto_historico": "As catequeses foram proferidas entre 5 de setembro de 1979 e 28 de novembro de 1984 e depois reunidas em edições com o título 'Teologia do Corpo: o amor humano no plano divino'.",
+    },
+    {
+        "titulo": "O Cristão Bem Formado",
+        "autor": "São João Bosco",
+        "santo": None,
+        "resumo": "Pequena obra que propõe uma norma de vida simples e prática para viver a fé com alegria, em oposição à ideia de que servir a Deus exige uma vida melancólica.",
+        "contexto_historico": "Escrita por Dom Bosco (1815–1888), sacerdote italiano fundador dos salesianos, com foco na formação cristã dos jovens.",
+    },
+    {
         "titulo": "Todos os Caminhos Levam a Roma",
         "autor": "Scott Hahn",
         "santo": None,
@@ -229,10 +292,11 @@ LIVROS = [
     },
 ]
 
-NOVENA_DEMO = {
+NOVENA_TERESINHA = {  # novena já existente: texto preservado
     "titulo": "Novena a Santa Teresinha",
     "santo": "Santa Teresinha do Menino Jesus",
     "descricao": "Nove dias de reflexão inspirados no 'pequeno caminho' de confiança e amor.",
+    "oracoes": ["Pai Nosso", "Ave Maria"],  # orações base originais desta novena
     "dias": [
         "Dia 1 – Confiança. Teresinha aprendeu que Deus não pede grandes feitos, mas um coração que confia. Entregue hoje a Ele as suas preocupações.",
         "Dia 2 – Simplicidade. A santidade está nas pequenas coisas feitas com amor. Que gesto simples você pode oferecer hoje?",
@@ -247,9 +311,104 @@ NOVENA_DEMO = {
 }
 
 
+
+ORACOES_NOVENA_PADRAO = ["Pai Nosso", "Ave Maria", "Glória ao Pai"]
+
+# As reflexões abaixo foram redigidas para o Fides; NÃO são citações dos santos nem
+# orações oficiais. Orações tradicionais (Pai Nosso, Ave Maria, Glória, "Nada te
+# perturbe", "Tarde te amei") vêm do catálogo geral.
+NOVENA_TERESA = {
+    "titulo": "Novena a Santa Teresa d'Ávila",
+    "santo": "Santa Teresa d'Ávila",
+    "descricao": "Nove dias de reflexão sobre a vida de oração, inspirados em temas da espiritualidade de Santa Teresa d'Ávila. Textos de reflexão do Fides.",
+    "dias": [
+        "Dia 1 – Oração como amizade. Para Teresa, rezar era estar com Deus como se está com um amigo que sabemos que nos ama. Reserve hoje alguns minutos de silêncio e fale com Ele com simplicidade.",
+        "Dia 2 – Recomeçar. Teresa conheceu períodos de frieza e voltou a Deus. Nenhum atraso na vida de oração é definitivo: comece de novo hoje, sem se desculpar demais.",
+        "Dia 3 – O castelo interior. Teresa descreveu a alma como um castelo com muitas moradas, onde Deus habita no centro. Entre em si mesmo e reconheça que a presença de Deus já está aí.",
+        "Dia 4 – Perseverança. A oração se constrói dia após dia, mesmo quando não há consolação. Escolha um horário realista e seja fiel a ele nesta semana.",
+        "Dia 5 – Humildade e verdade. Andar na verdade é reconhecer os próprios limites e os dons recebidos. Agradeça a Deus pelo que você é e entregue o que ainda precisa ser curado.",
+        "Dia 6 – Coragem para reformar. Teresa reformou o Carmelo enfrentando incompreensões. Peça a graça de corrigir, com firmeza e caridade, aquilo que em sua vida esfriou o amor.",
+        "Dia 7 – Não desanimar nas securas. Há dias em que rezar parece vazio. Ofereça essa aridez a Deus: permanecer fiel já é uma forma de amar.",
+        "Dia 8 – Oração que serve. Teresa uniu contemplação e ação, Maria e Marta. Que gesto concreto de serviço nasce da sua oração de hoje?",
+        "Dia 9 – Só Deus basta. Ao concluir a novena, entregue seus pedidos com confiança e peça serenidade diante do que passa. Reze a oração 'Nada te perturbe'.",
+    ],
+    "extras": {9: ["Nada te perturbe"]},
+}
+
+NOVENA_AGOSTINHO = {
+    "titulo": "Novena a Santo Agostinho",
+    "santo": "Santo Agostinho",
+    "descricao": "Nove dias de reflexão sobre a busca de Deus e a conversão, inspirados em temas da vida e da obra de Santo Agostinho. Textos de reflexão do Fides.",
+    "dias": [
+        "Dia 1 – O coração inquieto. Agostinho procurou longe de Deus aquilo que só Deus pode dar. Nomeie hoje a inquietação que você carrega e apresente-a ao Senhor.",
+        "Dia 2 – A oração que persevera. A conversão de Agostinho foi acompanhada pelas lágrimas e orações de sua mãe, Santa Mônica. Reze hoje por alguém que você deseja ver mais perto de Deus.",
+        "Dia 3 – Beleza antiga e nova. Agostinho reconheceu tarde que Deus estava dentro dele enquanto o procurava fora. Perceba hoje onde a beleza de Deus já se mostra no seu cotidiano. Reze 'Tarde te amei'.",
+        "Dia 4 – Voltar-se para dentro. A verdade não se encontra na dispersão. Dedique um momento de silêncio, sem telas, para escutar o que Deus diz na sua consciência.",
+        "Dia 5 – Humildade. Agostinho aprendeu que o orgulho fecha o caminho para Deus. Peça a graça de reconhecer sua necessidade de Deus e dos outros.",
+        "Dia 6 – Graça e liberdade. A conversão é obra da graça que respeita a liberdade. Qual passo de conversão Deus lhe pede agora? Peça força para dá-lo.",
+        "Dia 7 – O amor como medida. Para Agostinho, a vida cristã se resume em amar. Examine hoje seus gestos: onde o amor pode ser mais concreto?",
+        "Dia 8 – Comunidade e Igreja. Agostinho viveu em comunidade e serviu como bispo. Agradeça pelas pessoas que o aproximam de Deus e reze pela Igreja.",
+        "Dia 9 – Descansar em Deus. Ao concluir a novena, entregue suas buscas ao Senhor e peça a graça da perseverança, até que o coração encontre repouso em Deus.",
+    ],
+    "extras": {3: ["Tarde te amei"], 9: ["Tarde te amei"]},
+}
+
+NOVENAS = [NOVENA_TERESINHA, NOVENA_TERESA, NOVENA_AGOSTINHO]
+
+# Grafias antigas de nomes (versões anteriores dos seeds) -> nome atual.
+NOMES_LEGADOS = {"Santa Teresa d'Ávila": ["Santa Teresa de Ávila"]}
+
+
+# --------------------------------------------------------------------------- #
+# Configuração do administrador
+# --------------------------------------------------------------------------- #
+def _env(nome: str):
+    valor = os.getenv(nome)
+    return valor if valor not in (None, "") else None
+
+
+def resolver_credenciais_admin() -> tuple:
+    """Resolve (login, senha, email) a partir do ambiente.
+
+    Login:  FIDES_ADMIN_LOGIN  -> padrão "adm".
+    Senha:  FIDES_ADMIN_SENHA  -> FIDES_ADMIN_PASSWORD (alias) -> padrão de dev.
+    Se as duas variáveis de senha existirem e forem diferentes, vale
+    FIDES_ADMIN_SENHA e um aviso é emitido (sem expor os valores).
+    """
+    login = (_env("FIDES_ADMIN_LOGIN") or LOGIN_PADRAO_DEV).strip()
+    senha_principal, senha_alias = _env("FIDES_ADMIN_SENHA"), _env("FIDES_ADMIN_PASSWORD")
+    if senha_principal is not None:
+        senha = senha_principal
+        if senha_alias is not None and senha_alias != senha_principal:
+            warnings.warn(
+                "FIDES_ADMIN_SENHA e FIDES_ADMIN_PASSWORD estão definidas com valores "
+                "diferentes; FIDES_ADMIN_SENHA tem precedência.", stacklevel=2)
+    elif senha_alias is not None:
+        senha = senha_alias
+    else:
+        senha = SENHA_PADRAO_DEV
+    return login, senha, _env("FIDES_ADMIN_EMAIL")
+
+
 # --------------------------------------------------------------------------- #
 # Funções de seed (idempotentes)
 # --------------------------------------------------------------------------- #
+def migrar_esquema_administrador(session) -> None:
+    """Adiciona a coluna de login a bancos criados pela versão anterior.
+
+    ``create_all`` não altera tabelas existentes; sem isto, um banco antigo
+    (Administradores só com e-mail) quebraria. Em banco novo é um no-op.
+    """
+    insp = inspect(session.connection())
+    if "Administradores" not in insp.get_table_names():
+        return
+    colunas = {c["name"] for c in insp.get_columns("Administradores")}
+    if "login_administrador" not in colunas:
+        session.execute(text('ALTER TABLE "Administradores" ADD COLUMN login_administrador VARCHAR'))
+        session.execute(text('CREATE UNIQUE INDEX IF NOT EXISTS uq_administradores_login '
+                             'ON "Administradores" (login_administrador)'))
+
+
 def seed_momentos(session) -> dict:
     existentes = {m.bloco: m for m in session.scalars(select(MomentoDia))}
     for bloco in BlocoMomento:
@@ -260,41 +419,68 @@ def seed_momentos(session) -> dict:
     return existentes
 
 
-def seed_administrador(session) -> Administrador:
-    email = os.getenv("FIDES_ADMIN_EMAIL", "admin@fides.local")
-    senha = os.getenv("FIDES_ADMIN_PASSWORD", "admin123")
-    admin = session.scalar(select(Administrador).where(Administrador.email == email))
+def seed_administrador(session, redefinir_senha: bool = False) -> Administrador:
+    """Cria o administrador inicial sem duplicar e sem trocar senha existente.
+
+    * Já existe admin com o login resolvido -> mantém (senha só muda com
+      ``redefinir_senha=True``).
+    * Existe admin da versão anterior (sem login) -> recebe o login, mantendo
+      a senha que já tinha.
+    * Caso contrário, cria o administrador com o hash da senha resolvida.
+    """
+    login, senha, email = resolver_credenciais_admin()
+    admin = session.scalar(select(Administrador).where(Administrador.login == login))
     if admin is None:
-        admin = Administrador(nome="Administrador FIDES", email=email)
+        admin = session.scalar(select(Administrador).where(Administrador.login.is_(None))
+                               .order_by(Administrador.id))
+        if admin is not None:  # reconciliação do administrador legado
+            admin.login = login
+            print(f"[info] Administrador da versão anterior atualizado com o login '{login}'; "
+                  "a senha anterior foi mantida (use --redefinir-senha-admin para trocá-la).")
+    if admin is None:
+        admin = Administrador(nome="Administrador FIDES", login=login, email=email)
         admin.definir_senha(senha)
         session.add(admin)
-        session.flush()
-        if "FIDES_ADMIN_PASSWORD" not in os.environ:
-            print(f"[aviso] Administrador de desenvolvimento criado: {email} / {senha} "
-                  "(defina FIDES_ADMIN_PASSWORD em produção)")
+        if "FIDES_ADMIN_SENHA" not in os.environ and "FIDES_ADMIN_PASSWORD" not in os.environ:
+            print(f"[aviso] Administrador criado com a senha PADRÃO de desenvolvimento "
+                  f"(login '{login}'). Defina FIDES_ADMIN_SENHA antes de qualquer implantação pública.")
+    elif redefinir_senha:
+        admin.definir_senha(senha)
+    session.flush()
     return admin
 
 
+def _oracao_geral(session, titulo: str):
+    return session.scalar(select(Oracao).where(Oracao.titulo == titulo, Oracao.santo_id.is_(None)))
+
+
 def seed_oracoes(session, momentos: dict) -> None:
-    for item in ORACOES_BASICAS + ORACOES_MOMENTOS:
-        oracao = session.scalar(select(Oracao).where(Oracao.titulo == item["titulo"],
-                                                     Oracao.santo_id.is_(None)))
-        if oracao is None:
-            oracao = Oracao(titulo=item["titulo"], texto=item["texto"],
-                            basica=item in ORACOES_BASICAS)
-            session.add(oracao)
-        oracao.momentos = [momentos[b] for b in item["momentos"]]
+    """Cria o catálogo geral e alinha a classificação básica/complementar."""
+    for lista, basica in ((ORACOES_BASICAS, True), (ORACOES_COMPLEMENTARES, False)):
+        for item in lista:
+            oracao = _oracao_geral(session, item["titulo"])
+            if oracao is None:
+                oracao = Oracao(titulo=item["titulo"], texto=item["texto"], basica=basica)
+                session.add(oracao)
+            elif oracao.basica != basica:
+                oracao.basica = basica  # atualização controlada (classificação)
+            for bloco in item["momentos"]:  # só acrescenta; nunca remove
+                if momentos[bloco] not in oracao.momentos:
+                    oracao.momentos.append(momentos[bloco])
     session.flush()
 
 
 def seed_santos(session) -> dict:
     santos = {}
     for item in SANTOS:
-        santo = session.scalar(select(Santo).where(Santo.nome == item["nome"]))
+        nomes = [item["nome"]] + NOMES_LEGADOS.get(item["nome"], [])
+        santo = session.scalar(select(Santo).where(Santo.nome.in_(nomes)))
         if santo is None:
             santo = Santo(**item)
             session.add(santo)
-        santos[santo.nome] = santo
+        elif santo.nome != item["nome"]:
+            santo.nome = item["nome"]  # atualização controlada (grafia), mesmo registro
+        santos[item["nome"]] = santo
     session.flush()
 
     for item in ORACOES_SANTOS:
@@ -317,44 +503,70 @@ def seed_livros(session, santos: dict) -> None:
                 contexto_historico=item["contexto_historico"],
                 santo_id=santos[item["santo"]].id if item["santo"] else None,
             ))
+        else:  # atualização controlada: acompanha a grafia do nome do santo
+            for atual, legados in NOMES_LEGADOS.items():
+                if existe.autor in legados:
+                    existe.autor = atual
     session.flush()
 
 
-def seed_novena(session, santos: dict) -> None:
-    if session.scalar(select(Novena).where(Novena.titulo == NOVENA_DEMO["titulo"])):
-        return
-    pai_nosso = session.scalar(select(Oracao).where(Oracao.titulo == "Pai Nosso"))
-    ave_maria = session.scalar(select(Oracao).where(Oracao.titulo == "Ave Maria"))
-    novena = Novena(titulo=NOVENA_DEMO["titulo"], descricao=NOVENA_DEMO["descricao"],
-                    santo_id=santos[NOVENA_DEMO["santo"]].id)
-    for numero, texto in enumerate(NOVENA_DEMO["dias"], start=1):
-        novena.dias.append(DiaNovena(numero_dia=numero, texto_reflexao=texto,
-                                     oracoes=[pai_nosso, ave_maria]))
-    session.add(novena)
+def seed_novenas(session, santos: dict, admin: Administrador) -> None:
+    """Cadastra as novenas via ``Novena.cadastrar`` (valida token e os 9 dias)."""
+    token = admin.emitir_token()
+    for item in NOVENAS:
+        if session.scalar(select(Novena).where(Novena.titulo == item["titulo"])):
+            continue  # nunca reescreve uma novena existente
+        base = [_oracao_geral(session, t).id for t in item.get("oracoes", ORACOES_NOVENA_PADRAO)]
+        dias = []
+        for numero, texto in enumerate(item["dias"], start=1):
+            ids = list(base)
+            for titulo in item.get("extras", {}).get(numero, []):
+                oracao = session.scalar(select(Oracao).where(
+                    Oracao.titulo == titulo, Oracao.santo_id == santos[item["santo"]].id))
+                ids.append(oracao.id)
+            dias.append({"texto_reflexao": texto, "oracoes_base_ids": ids})
+        Novena.cadastrar(session, {"titulo": item["titulo"], "descricao": item["descricao"],
+                                   "santo_id": santos[item["santo"]].id, "dias": dias}, token)
     session.flush()
 
 
-def executar_seeds(session) -> None:
+def executar_seeds(session, redefinir_senha_admin: bool = False) -> None:
+    """Executa todos os seeds na sessão dada (sem commit)."""
+    migrar_esquema_administrador(session)
     momentos = seed_momentos(session)
-    seed_administrador(session)
+    admin = seed_administrador(session, redefinir_senha_admin)
     seed_oracoes(session, momentos)
     santos = seed_santos(session)
     seed_livros(session, santos)
-    seed_novena(session, santos)
-    # Liturgia não é semeada: depende da data atual (janela de ±7 dias, RNF07) e deve ser carregada pela integração com a Canção Nova
+    seed_novenas(session, santos, admin)
+    # Liturgia não é semeada: depende da data atual (janela de ±7 dias, RNF07)
+    # e deve ser carregada pela integração com a fonte externa (Canção Nova).
+
+
+def popular_banco(session, redefinir_senha_admin: bool = False) -> None:
+    """Seeds em uma única transação: tudo é gravado ou nada é (rollback)."""
+    try:
+        executar_seeds(session, redefinir_senha_admin)
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Cria o banco do FIDES e popula os seeds.")
-    parser.add_argument("--reset", action="store_true", help="apaga todas as tabelas antes")
+    parser.add_argument("--reset", action="store_true",
+                        help="DESTRUTIVO: apaga todas as tabelas e TODOS os dados antes de recriar")
+    parser.add_argument("--redefinir-senha-admin", action="store_true",
+                        help="regrava a senha do administrador com o valor configurado")
     args = parser.parse_args()
 
     if args.reset:
+        print(f"[ATENÇÃO] --reset: apagando todas as tabelas e dados de {DATABASE_URL}")
         apagar_tabelas()
     criar_tabelas()
     with SessionLocal() as session:
-        executar_seeds(session)
-        session.commit()
+        popular_banco(session, args.redefinir_senha_admin)
     print("Banco criado e populado com sucesso.")
 
 
