@@ -4,6 +4,7 @@ Uso (a partir da raiz do repositório):
 
     python -m database.seeds                          # cria tabelas (se faltarem) e popula
     python -m database.seeds --redefinir-senha-admin  # idem, e regrava a senha do admin
+    python -m database.seeds --liturgia-referencia 2026-11-20   # janela da liturgia em torno dessa data
     python -m database.seeds --reset                  # DESTRUTIVO: apaga TODAS as tabelas e dados
 
 Política dos seeds
@@ -20,8 +21,13 @@ Política dos seeds
        mantendo a senha que já possuía.
 * Associações a momentos do dia só são ACRESCENTADAS, nunca removidas.
 * Tudo roda em uma única transação: se algo falhar, nada é gravado (rollback).
-* O conteúdo religioso é inicial e deve ser revisado/ampliado pelo painel
-  administrativo (US18-US22).
+* O conteúdo religioso é inicial e deve ser revisado/ampliado (o painel
+  administrativo, US18-US22, é Fase 2; no MVP o povoamento é por seeds, RNF09).
+* Liturgia (MVP, RNF07): a janela de ±7 dias em torno da data de referência
+  (hoje, por padrão) é semeada com texto de DEMONSTRAÇÃO. O texto oficial da
+  liturgia não é reproduzido; na Fase 2 ele virá de uma fonte externa confiável.
+  Como a janela acompanha a data atual, rode os seeds novamente quando precisar
+  renovar a janela (não apaga dias antigos).
 
 Variáveis de ambiente (opcionais):
     FIDES_ADMIN_LOGIN     login do administrador (padrão de desenvolvimento: "adm")
@@ -33,14 +39,19 @@ Variáveis de ambiente (opcionais):
 import argparse
 import os
 import warnings
+from datetime import date, timedelta
 
 from sqlalchemy import inspect, select, text
 
 from .connection import DATABASE_URL, SessionLocal, apagar_tabelas, criar_tabelas
 from .models import (
+    INTERVALO_LITURGIA_DIAS,
     Administrador,
+    BlocoLiturgia,
     BlocoMomento,
     Livro,
+    LiturgiaDia,
+    LiturgiaHora,
     MomentoDia,
     Novena,
     Oracao,
@@ -110,7 +121,7 @@ ORACOES_BASICAS = [
 # Orações COMPLEMENTARES (gerais, não básicas). Textos existentes preservados.
 ORACOES_COMPLEMENTARES = [
     {
-        "titulo": "Invocação ao Espírito Santo",
+        "titulo": "Invocação do Espírito Santo",
         "texto": (
             "Vinde, Espírito Santo, enchei os corações dos vossos fiéis e acendei neles o "
             "fogo do vosso amor. Enviai o vosso Espírito e tudo será criado, e renovareis a "
@@ -235,8 +246,8 @@ ORACOES_SANTOS = [
 
 LIVROS = [
     {
-        "titulo": "As Moradas (O Castelo Interior)",
-        "autor": "Santa Teresa d'Ávila",
+        "titulo": "O Castelo Interior",
+        "autor": "Santa Teresa de Jesus",
         "santo": "Santa Teresa d'Ávila",
         "resumo": "Descreve a vida de oração como a travessia de sete moradas no castelo interior da alma.",
         "contexto_historico": "Escrito em 1577, a pedido de superiores, já na maturidade espiritual da autora.",
@@ -530,7 +541,45 @@ def seed_novenas(session, santos: dict, admin: Administrador) -> None:
     session.flush()
 
 
-def executar_seeds(session, redefinir_senha_admin: bool = False) -> None:
+def seed_liturgia(session, data_referencia: date | None = None) -> None:
+    """Semeia a janela de ±7 dias com liturgia de DEMONSTRAÇÃO (RNF07, MVP).
+
+    * Cada dia recebe uma ``LiturgiaDia`` (Primeira Leitura, Salmo e Evangelho; a
+      Segunda Leitura só aos domingos, para testar US16) e as três
+      ``LiturgiaHora`` (Laudes, Horas Médias e Vésperas).
+    * Os textos são fictícios e identificados como demonstração: servem para
+      testar a exibição e a navegação por datas, não substituem a liturgia oficial.
+    * Idempotente: só cria o que falta para cada data/bloco; nunca apaga nem edita.
+    """
+    referencia = data_referencia or date.today()
+    for deslocamento in range(-INTERVALO_LITURGIA_DIAS, INTERVALO_LITURGIA_DIAS + 1):
+        dia = referencia + timedelta(days=deslocamento)
+        rotulo = f"{dia:%d/%m/%Y}"
+        aviso = "Texto de demonstração; não é a liturgia oficial do dia."
+
+        if session.scalar(select(LiturgiaDia).where(LiturgiaDia.data == dia)) is None:
+            domingo = dia.weekday() == 6
+            session.add(LiturgiaDia(
+                data=dia,
+                santo_celebrado="Celebração do dia (demonstração)",
+                primeira_leitura=f"[Demonstração] Primeira Leitura de {rotulo}. {aviso}",
+                salmo=f"[Demonstração] Salmo Responsorial de {rotulo}. {aviso}",
+                evangelho=f"[Demonstração] Evangelho de {rotulo}. {aviso}",
+                segunda_leitura=(f"[Demonstração] Segunda Leitura de {rotulo} (domingo). {aviso}"
+                                 if domingo else None),
+            ))
+        for bloco in BlocoLiturgia:
+            existe = session.scalar(select(LiturgiaHora).where(
+                LiturgiaHora.data == dia, LiturgiaHora.bloco == bloco))
+            if existe is None:
+                session.add(LiturgiaHora(
+                    data=dia, bloco=bloco,
+                    texto=f"[Demonstração] {bloco.value} de {rotulo}. {aviso}"))
+    session.flush()
+
+
+def executar_seeds(session, redefinir_senha_admin: bool = False,
+                   data_referencia: date | None = None) -> None:
     """Executa todos os seeds na sessão dada (sem commit)."""
     migrar_esquema_administrador(session)
     momentos = seed_momentos(session)
@@ -539,14 +588,14 @@ def executar_seeds(session, redefinir_senha_admin: bool = False) -> None:
     santos = seed_santos(session)
     seed_livros(session, santos)
     seed_novenas(session, santos, admin)
-    # Liturgia não é semeada: depende da data atual (janela de ±7 dias, RNF07)
-    # e deve ser carregada pela integração com a fonte externa (Canção Nova).
+    seed_liturgia(session, data_referencia)
 
 
-def popular_banco(session, redefinir_senha_admin: bool = False) -> None:
+def popular_banco(session, redefinir_senha_admin: bool = False,
+                  data_referencia: date | None = None) -> None:
     """Seeds em uma única transação: tudo é gravado ou nada é (rollback)."""
     try:
-        executar_seeds(session, redefinir_senha_admin)
+        executar_seeds(session, redefinir_senha_admin, data_referencia)
         session.commit()
     except Exception:
         session.rollback()
@@ -559,6 +608,8 @@ def main() -> None:
                         help="DESTRUTIVO: apaga todas as tabelas e TODOS os dados antes de recriar")
     parser.add_argument("--redefinir-senha-admin", action="store_true",
                         help="regrava a senha do administrador com o valor configurado")
+    parser.add_argument("--liturgia-referencia", type=date.fromisoformat, metavar="AAAA-MM-DD",
+                        help="data central da janela de liturgia de demonstração (padrão: hoje)")
     args = parser.parse_args()
 
     if args.reset:
@@ -566,7 +617,7 @@ def main() -> None:
         apagar_tabelas()
     criar_tabelas()
     with SessionLocal() as session:
-        popular_banco(session, args.redefinir_senha_admin)
+        popular_banco(session, args.redefinir_senha_admin, args.liturgia_referencia)
     print("Banco criado e populado com sucesso.")
 
 

@@ -8,7 +8,7 @@ from database.connection import Base, criar_engine
 from database.models import (
     Administrador, AutenticacaoError, BlocoLiturgia, BlocoMomento, DadosInvalidosError,
     DiaNovena, ForaDoIntervaloError, Livro, Liturgia, LiturgiaDia, LiturgiaHora,
-    MomentoDia, Novena, Oracao, Santo,
+    MomentoDia, Novena, Oracao, RegistroDuplicadoError, Santo,
 )
 from database import seeds
 from database.seeds import executar_seeds, popular_banco, resolver_credenciais_admin
@@ -65,7 +65,7 @@ def test_paginacao_respeita_limite_maximo(session):
 def test_santo_carrega_conteudos_vinculados(session):
     teresa = Santo.buscar_nome(session, "ávila")[0]
     assert [o.titulo for o in teresa.obter_oracoes()] == ["Nada te perturbe"]
-    assert [l.titulo for l in teresa.obter_livro()] == ["As Moradas (O Castelo Interior)"]
+    assert [l.titulo for l in teresa.obter_livro()] == ["O Castelo Interior"]
 
 
 def test_oracoes_basicas_e_filtro_por_momento(session):
@@ -125,19 +125,19 @@ def test_liturgia_abstrata_e_intervalo(session):
     with pytest.raises(TypeError):
         Liturgia(data=date.today())
     hoje = date.today()
-    session.add_all([
-        LiturgiaDia(data=hoje, primeira_leitura="Is 1", salmo="Sl 1", evangelho="Mt 1",
-                    segunda_leitura="  "),
-        LiturgiaHora(data=hoje, bloco=BlocoLiturgia.LAUDES, texto="Laudes..."),
-    ])
-    session.flush()
-    dia = LiturgiaDia.buscar_data(session, hoje)
-    assert dia.possui_segunda_leitura() is False
-    assert LiturgiaHora.buscar_bloco(session, hoje, "laudes").texto == "Laudes..."
-    assert len(Liturgia.buscar_por_data(session, hoje)) == 2
+    assert LiturgiaDia.buscar_data(session, hoje) is not None  # vem dos seeds
+    assert LiturgiaHora.buscar_bloco(session, hoje, "laudes").bloco == BlocoLiturgia.LAUDES
+    assert len(Liturgia.buscar_por_data(session, hoje)) == 4  # 1 dia + 3 horas
     with pytest.raises(ForaDoIntervaloError):
         LiturgiaDia.buscar_data(session, hoje + timedelta(days=8))
     assert Liturgia._dentro_intervalo(hoje - timedelta(days=7)) is True
+    assert Liturgia._dentro_intervalo(hoje + timedelta(days=8)) is False
+
+
+def test_possui_segunda_leitura():
+    assert LiturgiaDia(data=date.today(), segunda_leitura="  ").possui_segunda_leitura() is False
+    assert LiturgiaDia(data=date.today()).possui_segunda_leitura() is False
+    assert LiturgiaDia(data=date.today(), segunda_leitura="texto").possui_segunda_leitura() is True
 
 
 def test_seeds_sao_idempotentes(session):
@@ -171,7 +171,7 @@ def test_oito_livros_com_autores_e_santos_corretos(session):
     assert len(livros) == 8
     esperado = {
         "Teologia do Corpo": ("São João Paulo II", None),
-        "As Moradas (O Castelo Interior)": ("Santa Teresa d'Ávila", "Santa Teresa d'Ávila"),
+        "O Castelo Interior": ("Santa Teresa de Jesus", "Santa Teresa d'Ávila"),
         "Caminho": ("São Josemaria Escrivá", "São Josemaria Escrivá"),
         "Suma Teológica": ("São Tomás de Aquino", "São Tomás de Aquino"),
         "Confissões": ("Santo Agostinho", "Santo Agostinho"),
@@ -194,7 +194,7 @@ def test_classificacao_basica_e_complementar(session):
     assert gerais == {
         "Pai Nosso": True, "Ave Maria": True, "Glória ao Pai": True, "Credo": True,
         "Santo Anjo": True,
-        "Invocação ao Espírito Santo": False, "Oração a São Miguel Arcanjo": False,
+        "Invocação do Espírito Santo": False, "Oração a São Miguel Arcanjo": False,
         "Oferecimento do dia": False, "Bênção da refeição": False, "Alma de Cristo": False,
     }
 
@@ -205,7 +205,7 @@ def test_sao_miguel_comeca_como_exigido(session):
 
 
 def test_invocacao_preservada_e_complementar(session):
-    inv = _oracao(session, "Invocação ao Espírito Santo")
+    inv = _oracao(session, "Invocação do Espírito Santo")
     assert inv.texto.startswith("Vinde, Espírito Santo, enchei os corações dos vossos fiéis")
     assert inv.basica is False
     assert {m.bloco for m in inv.momentos} == {BlocoMomento.AO_ACORDAR}
@@ -433,3 +433,106 @@ def test_falha_no_seed_faz_rollback_total(monkeypatch):
             popular_banco(s)
         assert s.scalar(select(func.count()).select_from(Santo)) == 0
         assert s.scalar(select(func.count()).select_from(Administrador)) == 0
+
+
+# =========================================================================== #
+# Liturgia de demonstração (seeds)
+# =========================================================================== #
+def test_liturgia_semeada_para_toda_a_janela(session):
+    hoje = date.today()
+    for deslocamento in range(-7, 8):
+        dia = hoje + timedelta(days=deslocamento)
+        registro = LiturgiaDia.buscar_data(session, dia)
+        assert registro is not None
+        assert registro.primeira_leitura and registro.salmo and registro.evangelho
+        assert [h.bloco for h in sorted(LiturgiaHora.buscar_data(session, dia), key=lambda h: h.id)] == [
+            BlocoLiturgia.LAUDES, BlocoLiturgia.HORAS_MEDIAS, BlocoLiturgia.VESPERAS]
+        assert registro.possui_segunda_leitura() == (dia.weekday() == 6)  # só aos domingos
+    assert session.scalar(select(func.count()).select_from(Liturgia)) == 15 * 4
+
+
+def test_liturgia_fora_da_janela_nao_e_semeada(session):
+    fora = date.today() + timedelta(days=8)
+    assert session.scalar(select(func.count()).select_from(Liturgia).where(Liturgia.data == fora)) == 0
+
+
+def test_seed_de_liturgia_e_idempotente_e_aceita_data_de_referencia(session):
+    antes = session.scalar(select(func.count()).select_from(Liturgia))
+    popular_banco(session)
+    assert session.scalar(select(func.count()).select_from(Liturgia)) == antes
+    popular_banco(session, data_referencia=date(2030, 1, 15))
+    popular_banco(session, data_referencia=date(2030, 1, 15))
+    assert session.scalar(select(func.count()).select_from(Liturgia)) == antes + 60
+
+
+def test_liturgia_do_dia_duplicada_e_rejeitada_pelo_banco(session):
+    session.add(LiturgiaDia(data=date.today(), primeira_leitura="x"))
+    with pytest.raises(IntegrityError):
+        session.flush()
+    session.rollback()
+
+
+# =========================================================================== #
+# Unicidade de títulos (banco + erro de domínio)
+# =========================================================================== #
+def test_livro_duplicado_titulo_e_autor_rejeitado(session, token):
+    with pytest.raises(RegistroDuplicadoError):
+        Livro.cadastrar(session, {"titulo": "Caminho", "autor": "São Josemaria Escrivá"}, token)
+    session.rollback()
+
+
+def test_livro_mesmo_titulo_com_autor_diferente_e_permitido(session, token):
+    livro = Livro.cadastrar(session, {"titulo": "Caminho", "autor": "Outro Autor"}, token)
+    assert livro.id is not None
+
+
+def test_novena_duplicada_para_o_mesmo_santo_rejeitada(session, token):
+    santo = Santo.buscar_nome(session, "agostinho")[0]
+    dias = [{"texto_reflexao": f"dia {n}"} for n in range(1, 10)]
+    with pytest.raises(RegistroDuplicadoError):
+        Novena.cadastrar(session, {"titulo": "Novena a Santo Agostinho", "santo_id": santo.id,
+                                   "dias": dias}, token)
+    session.rollback()
+
+
+def test_novena_mesmo_titulo_para_outro_santo_e_permitida(session, token):
+    tomas = Santo.buscar_nome(session, "tomas")[0]
+    dias = [{"texto_reflexao": f"dia {n}"} for n in range(1, 10)]
+    novena = Novena.cadastrar(session, {"titulo": "Novena a Santo Agostinho", "santo_id": tomas.id,
+                                        "dias": dias}, token)
+    assert novena.id is not None
+
+
+def test_oracao_geral_duplicada_rejeitada(session, token):
+    with pytest.raises(RegistroDuplicadoError):
+        Oracao.cadastrar(session, {"titulo": "Pai Nosso", "texto": "outro texto"}, token)
+    session.rollback()
+
+
+def test_oracao_de_santo_duplicada_rejeitada_mas_outro_santo_pode_repetir_titulo(session, token):
+    teresa = Santo.buscar_nome(session, "avila")[0]
+    tomas = Santo.buscar_nome(session, "tomas")[0]
+    with pytest.raises(RegistroDuplicadoError):
+        Oracao.cadastrar(session, {"titulo": "Nada te perturbe", "texto": "x", "santo_id": teresa.id}, token)
+    session.rollback()
+    # mesmo título em outro santo, e igual a uma oração geral, são permitidos
+    assert Oracao.cadastrar(session, {"titulo": "Nada te perturbe", "texto": "x", "santo_id": tomas.id}, token).id
+    assert Oracao.cadastrar(session, {"titulo": "Nada te perturbe", "texto": "x"}, token).id
+
+
+def test_santo_duplicado_gera_erro_de_dominio(session, token):
+    with pytest.raises(RegistroDuplicadoError):
+        Santo.cadastrar(session, {"nome": "Santo Agostinho"}, token)
+    session.rollback()
+
+
+def test_unicidade_vale_no_banco_mesmo_sem_passar_pelos_metodos(session):
+    """O banco rejeita duplicatas inseridas diretamente pelo ORM/SQL."""
+    session.add(Livro(titulo="Caminho", autor="São Josemaria Escrivá"))
+    with pytest.raises(IntegrityError):
+        session.flush()
+    session.rollback()
+    session.add(Oracao(titulo="Credo", texto="x", basica=False))
+    with pytest.raises(IntegrityError):
+        session.flush()
+    session.rollback()

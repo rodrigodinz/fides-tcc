@@ -33,13 +33,16 @@ from sqlalchemy import (
     Date,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     String,
     Table,
     Text,
     UniqueConstraint,
     select,
+    text,
 )
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import relationship, validates
 
 from .connection import Base
@@ -63,6 +66,13 @@ class AutenticacaoError(Exception):
 
 class DadosInvalidosError(ValueError):
     """Dados de cadastro incompletos ou inconsistentes."""
+
+
+class RegistroDuplicadoError(DadosInvalidosError):
+    """Tentativa de cadastrar um registro que viola uma regra de unicidade.
+
+    Após este erro a transação da sessão deve ser desfeita (``rollback``).
+    """
 
 
 class ForaDoIntervaloError(ValueError):
@@ -110,6 +120,18 @@ def _exigir_campos(dados: dict, *campos: str) -> None:
     faltando = [c for c in campos if not dados.get(c)]
     if faltando:
         raise DadosInvalidosError(f"Campos obrigatórios ausentes: {', '.join(faltando)}")
+
+
+def _persistir(session, objeto, descricao: str) -> None:
+    """``add`` + ``flush`` traduzindo violações de unicidade em erro de domínio."""
+    session.add(objeto)
+    try:
+        session.flush()
+    except IntegrityError as erro:
+        mensagem = str(erro.orig).upper()
+        if "UNIQUE" in mensagem or "DUPLICATE" in mensagem:
+            raise RegistroDuplicadoError(f"Já existe {descricao}.") from erro
+        raise
 
 
 def _exigir_autenticacao(token) -> None:
@@ -269,8 +291,7 @@ class Santo(Base):
         _exigir_campos(dados, "nome")
         santo = cls(nome=dados["nome"], foto_url=dados.get("foto_url"),
                     biografia=dados.get("biografia"))
-        session.add(santo)
-        session.flush()
+        _persistir(session, santo, f"um santo chamado '{dados['nome']}'")
         return santo
 
 
@@ -295,6 +316,16 @@ class MomentoDia(Base):
 # --------------------------------------------------------------------------- #
 class Oracao(Base):
     __tablename__ = "Oracoes"
+    __table_args__ = (
+        # Unicidade de título: oração geral (sem santo) e oração de santo são
+        # regras separadas, pois NULL não conta como igual em UNIQUE comum.
+        Index("uq_oracao_titulo_geral", "titulo_oracao", unique=True,
+              sqlite_where=text("id_santo IS NULL"),
+              postgresql_where=text("id_santo IS NULL")),
+        Index("uq_oracao_titulo_por_santo", "id_santo", "titulo_oracao", unique=True,
+              sqlite_where=text("id_santo IS NOT NULL"),
+              postgresql_where=text("id_santo IS NOT NULL")),
+    )
 
     id = Column("id_oracao", Integer, primary_key=True)
     titulo = Column("titulo_oracao", String, nullable=False)
@@ -338,12 +369,13 @@ class Oracao(Base):
             raise DadosInvalidosError(f"Santo {santo_id} não encontrado.")
         oracao = cls(titulo=dados["titulo"], texto=dados["texto"],
                      basica=bool(dados.get("basica", False)), santo_id=santo_id)
-        session.add(oracao)
         if dados.get("momentos_ids"):
-            momentos = list(session.scalars(
-                select(MomentoDia).where(MomentoDia.id.in_(dados["momentos_ids"]))))
+            with session.no_autoflush:
+                momentos = list(session.scalars(
+                    select(MomentoDia).where(MomentoDia.id.in_(dados["momentos_ids"]))))
             oracao.categorizar(momentos, token)
-        session.flush()
+        escopo = "para este santo" if santo_id is not None else "entre as orações gerais"
+        _persistir(session, oracao, f"uma oração '{dados['titulo']}' {escopo}")
         return oracao
 
     def categorizar(self, momentos, token: str) -> None:
@@ -357,6 +389,7 @@ class Oracao(Base):
 # --------------------------------------------------------------------------- #
 class Novena(Base):
     __tablename__ = "Novenas"
+    __table_args__ = (UniqueConstraint("id_santo", "titulo_novena", name="uq_novena_santo_titulo"),)
 
     id = Column("id_novena", Integer, primary_key=True)
     titulo = Column("titulo_novena", String, nullable=False)
@@ -407,8 +440,7 @@ class Novena(Base):
                 if ids:
                     item.oracoes = list(session.scalars(select(Oracao).where(Oracao.id.in_(ids))))
                 novena.dias.append(item)
-        session.add(novena)
-        session.flush()
+        _persistir(session, novena, f"uma novena '{dados['titulo']}' para este santo")
         return novena
 
 
@@ -447,6 +479,7 @@ class DiaNovena(Base):
 # --------------------------------------------------------------------------- #
 class Livro(Base):
     __tablename__ = "Livros"
+    __table_args__ = (UniqueConstraint("titulo_livro", "autor_livro", name="uq_livro_titulo_autor"),)
 
     id = Column("id_livro", Integer, primary_key=True)
     titulo = Column("titulo_livro", String, nullable=False)
@@ -479,8 +512,7 @@ class Livro(Base):
             raise DadosInvalidosError(f"Santo {santo_id} não encontrado.")
         livro = cls(titulo=dados["titulo"], autor=dados["autor"], resumo=dados.get("resumo"),
                     contexto_historico=dados.get("contexto_historico"), santo_id=santo_id)
-        session.add(livro)
-        session.flush()
+        _persistir(session, livro, f"o livro '{dados['titulo']}' de {dados['autor']}")
         return livro
 
 
@@ -497,6 +529,13 @@ class Liturgia(Base):
     tipo = Column("tipo_liturgia", String(10), nullable=False)
 
     __mapper_args__ = {"polymorphic_on": tipo}
+    __table_args__ = (
+        # No máximo uma Liturgia do Dia por data. (As horas não têm índice
+        # equivalente porque o bloco fica na tabela filha; ver seeds.)
+        Index("uq_liturgia_dia_por_data", "data_liturgia", unique=True,
+              sqlite_where=text("tipo_liturgia = 'dia'"),
+              postgresql_where=text("tipo_liturgia = 'dia'")),
+    )
 
     def __init__(self, **kwargs):
         if type(self) is Liturgia:

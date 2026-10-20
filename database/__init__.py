@@ -7,6 +7,7 @@ from .models import (
     DadosInvalidosError,
     DiaNovena,
     ForaDoIntervaloError,
+    RegistroDuplicadoError,
     Livro,
     Liturgia,
     LiturgiaDia,
