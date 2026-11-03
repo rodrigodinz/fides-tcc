@@ -6,9 +6,11 @@ import pytest
 ROTAS_LISTA = ["/api/v1/santos", "/api/v1/oracoes", "/api/v1/novenas", "/api/v1/livros"]
 ROTAS_OK = ROTAS_LISTA + ["/health", "/api/v1/momentos", "/api/v1/santos/1", "/api/v1/novenas/1",
                           "/api/v1/novenas/1/dias", "/api/v1/novenas/1/dias/1", "/api/v1/livros/1",
-                          "/api/v1/liturgia/dia", "/api/v1/liturgia/horas"]
+                          "/api/v1/liturgia/dia", "/api/v1/liturgia/horas", "/api/v1/agenda",
+                          "/api/v1/livros/recomendados?santo_id=1"]
 ROTAS_ERRO = ["/api/v1/santos/999999", "/api/v1/santos?limite=99", "/api/v1/liturgia/dia?data=2000-01-01",
-              "/api/v1/liturgia/dia?data=xx", "/api/v1/novenas/1/dias/10", "/api/v1/inexistente"]
+              "/api/v1/liturgia/dia?data=xx", "/api/v1/novenas/1/dias/10", "/api/v1/inexistente",
+              "/api/v1/agenda?data=2000-01-01", "/api/v1/livros/recomendados"]
 
 # Termos que jamais devem aparecer em respostas públicas.
 PROIBIDOS = [r"senha", r"password", r"token", r"pbkdf2", r"senha_hash", r"secret", r"login", r"administrador",

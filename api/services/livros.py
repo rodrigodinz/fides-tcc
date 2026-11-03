@@ -25,6 +25,19 @@ def listar(session: Session, params: ParamsPaginacao, santo_id: int | None) -> P
     return paginar(session, consulta, params, _item, opcoes=(joinedload(Livro.santo),))
 
 
+def recomendados(session: Session, params: ParamsPaginacao, santos_ids: list[int]) -> Pagina[LivroItem]:
+    """UC13 / US12: livros dos santos acessados pelo fiel.
+
+    A recomendação decorre dos santos que o fiel visitou: o Front End guarda os
+    ids desses santos no dispositivo e os envia aqui. Livros sem santo vinculado
+    não entram na recomendação (aparecem só no catálogo geral, ``/livros``).
+    A coluna ``Livro.livro_recomendado`` não é usada (ver docs/API.md).
+    """
+    consulta = (select(Livro).where(Livro.santo_id.in_(set(santos_ids)))
+                .order_by(Livro.titulo, Livro.id))
+    return paginar(session, consulta, params, _item, opcoes=(joinedload(Livro.santo),))
+
+
 def detalhar(session: Session, livro_id: int) -> LivroDetalhe:
     livro = Livro.buscar_id(session, livro_id)  # método do modelo
     if livro is None:

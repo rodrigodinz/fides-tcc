@@ -1,6 +1,6 @@
-# FIDES – Backend (banco de dados)
+# FIDES – Backend (banco de dados e API REST)
 
-Camada de dados do FIDES: modelos SQLAlchemy a partir do Diagrama de Classes (versão remodelada de 30/10/2026), banco SQLite e seeds.
+Camada de dados do FIDES (modelos SQLAlchemy a partir do Diagrama de Classes remodelado em 30/10/2026, banco SQLite e seeds) e a API REST que a expõe ao Front End.
 
 ## Estrutura
 ```
@@ -9,7 +9,12 @@ database/
   models.py       Santo, Oracao, Novena, DiaNovena, Livro, Agenda, LiturgiaDia, LiturgiaHora
                   + MomentoDia (enum MomentoDoDia) e Administrador (autenticação)
   seeds.py        carga inicial idempotente
-tests/test_models.py
+api/              API REST (FastAPI): main.py, config.py, errors.py, routes/, schemas/, services/
+tests/test_models.py   testes do banco
+tests/api/        testes da API (sem __init__.py)
+docs/API.md       contrato da API
+static/santos/    imagens dos santos (foto_url)
+scripts/medir_desempenho.py
 ```
 O arquivo SQLite fica por padrão em `database.db`, na raiz do repositório (ignorado pelo git).
 Para outro local: `FIDES_DATABASE_URL` (ex.: `sqlite:///C:/dados/fides.db`).
@@ -108,9 +113,7 @@ A senha só é gravada como hash (PBKDF2-HMAC-SHA256); a senha de um administrad
 
 ## API REST (Back End)
 
-API somente leitura (FastAPI) que serve ao React o conteúdo do banco. Documentação completa: [`docs/API.md`](docs/API.md).
-
-> **Compatibilidade com a remodelagem:** a API chama quatro métodos que foram renomeados no modelo (`obter_oracoes`, `obter_novena`, `obter_livro` e `oracoes_base`). Veja a etapa 6 de `COMANDOS_ATUALIZACAO_BANCO.md` antes de subir a API.
+API somente leitura (FastAPI), versão **0.2.0**, compatível com esta versão do banco (remodelagem de 30/10/2026). Ela serve ao React o conteúdo do banco. A documentação completa está em [`docs/API.md`](docs/API.md).
 
 ### Executar (a partir da raiz do repositório)
 
@@ -128,19 +131,41 @@ A API **não** cria tabelas, não roda seeds e não altera dados ao iniciar. Se 
 |---|---|---|
 | `FIDES_CORS_ORIGINS` | `http://localhost:5173,http://localhost:3000` | Origens do Front End (separadas por vírgula) |
 | `FIDES_STATIC_DIR` | `<raiz>/static` | Diretório servido em `/static` (imagens dos santos) |
-| `FIDES_TIMEZONE` | `America/Sao_Paulo` | Fuso usado para "hoje" na liturgia (Linux/macOS) |
+| `FIDES_TIMEZONE` | `America/Sao_Paulo` | Fuso usado para "hoje" na liturgia e na agenda (só Linux/macOS; no Windows vale o fuso do sistema) |
 
 `FIDES_DATABASE_URL` e `FIDES_SECRET_KEY` continuam como descrito na seção do banco de dados.
+
+### Rotas (todas GET e públicas; prefixo `/api/v1`, exceto `/health`)
+
+| Rota | Conteúdo |
+|---|---|
+| `/santos`, `/santos/{id}` | Catálogo, busca sem acento (`?q=`) e detalhe com orações, novenas e livros do santo |
+| `/oracoes`, `/momentos` | Orações com filtros combináveis (`basica`, `momento_id`, `santo_id`) e momentos do dia |
+| `/novenas`, `/novenas/{id}`, `/novenas/{id}/dias`, `/novenas/{id}/dias/{n}` | Catálogo, **progresso pela Agenda** ("Dia X de 9", situação e datas dos 9 dias) e conteúdo de cada dia |
+| `/livros`, `/livros/{id}` | Catálogo e detalhe (resumo e contexto histórico) |
+| `/livros/recomendados?santo_id=` | Recomendação de leitura: livros dos santos acessados pelo fiel (UC13) |
+| `/liturgia/dia`, `/liturgia/horas` | Liturgia do Dia e Liturgia das Horas por data (hoje ± 7 dias) |
+| `/agenda?data=` | Conteúdo agendado para a data: liturgia do dia, liturgia das horas e novenas em andamento |
+| `/health` | Saúde da aplicação e do banco |
+
+A liturgia é **de demonstração**. Pedidos de oração e marcações pessoais do fiel ficam no dispositivo; não há conta de fiel nem rotas de escrita (Fase 2). A coluna `Livro.livro_recomendado` não é usada pela API, porque a recomendação é feita pelos santos acessados.
+
+### Preparar a janela de uma apresentação
+
+Os seeds criam a liturgia para ±7 dias em torno de `--data-referencia` e agendam cada novena **uma única vez**. Por isso, para mudar as datas é preciso partir de um banco novo:
+
+```powershell
+Rename-Item database.db database_backup.db          # guarda o banco atual
+python -m database.seeds --data-referencia 2026-11-25
+```
+
+Com a referência em 25/11, a liturgia cobre de 18/11 a 02/12. Na data de referência, a novena de Santa Teresinha está no dia 5, a de Santa Teresa d'Ávila no dia 1, e a de Santo Agostinho começa dois dias depois. Detalhes em `docs/API.md` (seção 9).
 
 ### Testes
 
 ```bash
-python -m pytest            # persistência (101) + API
+python -m pytest            # persistência (tests/test_models.py) + API (263)
 python -m pytest tests/api  # somente a API
 ```
 
-Os testes usam bancos SQLite temporários e nunca tocam o `database.db`. O `pytest.ini` define `pythonpath = .`; se o repositório já tiver um `pytest.ini`/`conftest.py`, mantenha o seu e apenas garanta que a raiz esteja no `pythonpath`.
-
-### Principais rotas (prefixo `/api/v1`)
-
-`/santos`, `/santos/{id}`, `/oracoes`, `/momentos`, `/novenas`, `/novenas/{id}/dias/{n}`, `/livros`, `/livros/{id}`, `/liturgia/dia`, `/liturgia/horas`, além de `/health`. A liturgia é **de demonstração**.
+Os testes usam bancos SQLite temporários e nunca tocam o `database.db`. O `pytest.ini` define `pythonpath = .`. A pasta `tests/api/` **não** deve ter `__init__.py`, porque isso conflita com o pacote `api`.

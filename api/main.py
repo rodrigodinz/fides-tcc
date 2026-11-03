@@ -8,19 +8,20 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .config import aplicar_fuso_horario, get_settings
 from .errors import RESPOSTAS_ERRO, CapturaErrosInternos, registrar_handlers
-from .routes import health, liturgia, livros, novenas, oracoes, santos
+from .routes import agenda, health, liturgia, livros, novenas, oracoes, santos
 
 DESCRICAO = (
     "API REST (somente leitura) do Fides - Plataforma Integrada de Conteúdo e Práticas Católicas. "
-    "MVP: histórias US01-US17. **Os textos de liturgia são de demonstração.**"
+    "MVP: histórias US01-US17, sobre o banco remodelado (UML de 30/10/2026). "
+    "**Os textos de liturgia são de demonstração.**"
 )
 
 
 class StaticFilesTolerante(StaticFiles):
     """StaticFiles que responde 404 (e não 500) se o diretório não existir.
 
-    As imagens dos santos ainda não foram adicionadas; a API deve funcionar
-    mesmo sem o diretório configurado em FIDES_STATIC_DIR.
+    A API deve funcionar mesmo sem o diretório configurado em FIDES_STATIC_DIR
+    ou sem alguma das imagens dos santos.
     """
 
     async def check_config(self) -> None:
@@ -38,7 +39,7 @@ def create_app() -> FastAPI:
     config = get_settings()
     aplicar_fuso_horario(config.timezone)
 
-    app = FastAPI(title="Fides API", version="0.1.0", description=DESCRICAO,
+    app = FastAPI(title="Fides API", version="0.2.0", description=DESCRICAO,
                   responses={422: RESPOSTAS_ERRO[422], 500: RESPOSTAS_ERRO[500]})
 
     # A ordem importa: o último adicionado é o mais externo (CORS envolve tudo).
@@ -53,7 +54,7 @@ def create_app() -> FastAPI:
     registrar_handlers(app)
 
     app.include_router(health.router)
-    for modulo in (santos, oracoes, novenas, livros, liturgia):
+    for modulo in (santos, oracoes, novenas, livros, liturgia, agenda):
         app.include_router(modulo.router, prefix="/api/v1")
 
     # check_dir=False: a API sobe mesmo sem o diretório/imagens (serão 404).

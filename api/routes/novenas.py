@@ -1,7 +1,9 @@
-"""US07-US10: catálogo de novenas, dias e navegação entre dias.
+"""US07-US10: catálogo de novenas, dias, progresso pela agenda e navegação entre dias.
 
-O progresso individual (dia atual, dias concluídos, pedidos) NÃO é persistido
-no servidor: o banco só guarda o conteúdo fixo. Ver docs/API.md.
+O "Dia X de 9" vem da Agenda global definida pelo administrador (no MVP, pelos
+seeds), por meio de ``Agenda.buscar_ativa`` e ``Agenda.calcular_dia_atual``.
+Não há progresso individual do fiel nem pedidos de oração no servidor: pedidos
+e marcações pessoais ficam no dispositivo (estado do React). Ver docs/API.md.
 """
 from typing import Annotated
 
@@ -22,18 +24,18 @@ Sessao = Annotated[Session, Depends(get_session)]
 IdNovena = Annotated[int, Path(ge=1)]
 
 
-@router.get("", response_model=Pagina[NovenaItem], summary="Catálogo de novenas (US07)")
+@router.get("", response_model=Pagina[NovenaItem], summary="Catálogo de novenas com a agenda ativa (US07, US08)")
 def listar_novenas(session: Sessao, paginacao: Paginacao,
                    santo_id: Annotated[int | None, Query(ge=1)] = None):
     return servico.listar(session, paginacao, santo_id)
 
 
-@router.get("/{novena_id}", response_model=NovenaItem, summary="Detalhe de uma novena (US08)")
+@router.get("/{novena_id}", response_model=NovenaItem, summary="Detalhe e progresso pela agenda (US08)")
 def detalhar_novena(session: Sessao, novena_id: IdNovena):
     return servico.detalhar(session, novena_id)
 
 
-@router.get("/{novena_id}/dias", response_model=DiasDaNovena, summary="Os nove dias da novena (US08)")
+@router.get("/{novena_id}/dias", response_model=DiasDaNovena, summary="Calendário dos nove dias (US08)")
 def listar_dias(session: Sessao, novena_id: IdNovena):
     return servico.listar_dias(session, novena_id)
 
