@@ -1,5 +1,8 @@
 # Relatório 2 — Estado técnico atual do código (API REST)
 
+> **ERRATA (documentação de encerramento do backend):** (1) a afirmação de que `seeds.py` e o relatório do banco citam "RNF09" incorretamente para o povoamento por seeds **não se sustenta** para a lista RNF01–RNF11 do Relatório Técnico de elicitação, em que RNF09 é justamente o povoamento (a divergência real é entre as duas listas de RNFs). (2) A data "14/10/2026" citada neste relatório não foi verificada. (3) O RNF01 consta como 2 s na lista de 11 RNFs e como 3 s no PDF de histórias de usuário. Texto original preservado abaixo como registro histórico.
+
+
 *Versão de 14/10/2026.*
 
 ## Estrutura (arquivos novos; `database/` e `tests/test_models.py` inalterados)

@@ -4,30 +4,29 @@ Uso (a partir da raiz do repositório):
 
     python -m database.seeds                          # cria tabelas (se faltarem) e popula
     python -m database.seeds --redefinir-senha-admin  # idem, e regrava a senha do admin
-    python -m database.seeds --liturgia-referencia 2026-11-20   # janela da liturgia em torno dessa data
+    python -m database.seeds --data-referencia 2026-11-20   # agendas/liturgia em torno dessa data
     python -m database.seeds --reset                  # DESTRUTIVO: apaga TODAS as tabelas e dados
 
 Política dos seeds
 ------------------
 * Criação de tabelas e inserção de dados são etapas distintas
   (``criar_tabelas()`` x ``executar_seeds()``).
-* Idempotentes: registros já existentes não são duplicados nem recriados.
-* Atualizações controladas (as ÚNICAS que alteram registros existentes):
-    1. ``Oracao.basica`` é alinhada às listas ORACOES_BASICAS / ORACOES_COMPLEMENTARES;
-    2. o santo gravado como "Santa Teresa de Ávila" (grafia da versão anterior) é
-       renomeado para "Santa Teresa d'Ávila" (mesmo registro, sem duplicar), e o
-       autor do livro correspondente acompanha;
-    3. administrador da versão anterior (sem login) recebe o login configurado,
-       mantendo a senha que já possuía.
-* Associações a momentos do dia só são ACRESCENTADAS, nunca removidas.
+* Só CRIAM o que falta. Registros existentes não são duplicados, recriados nem
+  alterados (nem a classificação das orações, nem os momentos, nem a senha do
+  administrador, salvo ``--redefinir-senha-admin``).
 * Tudo roda em uma única transação: se algo falhar, nada é gravado (rollback).
-* O conteúdo religioso é inicial e deve ser revisado/ampliado (o painel
-  administrativo, US18-US22, é Fase 2; no MVP o povoamento é por seeds, RNF09).
-* Liturgia (MVP, RNF07): a janela de ±7 dias em torno da data de referência
-  (hoje, por padrão) é semeada com texto de DEMONSTRAÇÃO. O texto oficial da
-  liturgia não é reproduzido; na Fase 2 ele virá de uma fonte externa confiável.
-  Como a janela acompanha a data atual, rode os seeds novamente quando precisar
-  renovar a janela (não apaga dias antigos).
+* Banco da versão anterior (antes da remodelagem UML de 30/10/2026): os seeds
+  recusam rodar e explicam como recriar o banco (``EsquemaDesatualizadoError``),
+  porque ``create_all`` não altera tabelas existentes.
+* O conteúdo religioso é inicial e deve ser revisado (o painel administrativo,
+  US18-US22, é Fase 2; no MVP o povoamento é por seeds, RNF09).
+* Agendas (UC06, UC14): cada novena recebe uma agenda de demonstração com
+  início relativo à data de referência (ver AGENDA_NOVENAS), e a janela de ±7
+  dias da liturgia recebe uma agenda de LITURGIA.
+* Liturgia (MVP, RNF07): cada dia da janela recebe Liturgia do Dia e as três
+  Liturgias das Horas com texto de DEMONSTRAÇÃO, ligados à agenda de liturgia.
+  O texto oficial não é reproduzido; na Fase 2 virá de uma fonte externa. Como a
+  janela acompanha a data atual, rode os seeds de novo para renová-la.
 
 Variáveis de ambiente (opcionais):
     FIDES_ADMIN_LOGIN     login do administrador (padrão de desenvolvimento: "adm")
@@ -41,12 +40,13 @@ import os
 import warnings
 from datetime import date, timedelta
 
-from sqlalchemy import inspect, select, text
+from sqlalchemy import inspect, select
 
-from .connection import DATABASE_URL, SessionLocal, apagar_tabelas, criar_tabelas
+from .connection import DATABASE_URL, SessionLocal, apagar_tabelas, criar_tabelas, engine
 from .models import (
     INTERVALO_LITURGIA_DIAS,
     Administrador,
+    Agenda,
     BlocoLiturgia,
     BlocoMomento,
     Livro,
@@ -56,6 +56,7 @@ from .models import (
     Novena,
     Oracao,
     Santo,
+    TipoAgenda,
 )
 
 LOGIN_PADRAO_DEV = "adm"
@@ -366,8 +367,24 @@ NOVENA_AGOSTINHO = {
 
 NOVENAS = [NOVENA_TERESINHA, NOVENA_TERESA, NOVENA_AGOSTINHO]
 
-# Grafias antigas de nomes (versões anteriores dos seeds) -> nome atual.
-NOMES_LEGADOS = {"Santa Teresa d'Ávila": ["Santa Teresa de Ávila"]}
+# US12 / UC13: obras indicadas para "saber por onde começar os estudos". A
+# história cita como exemplo obras de Santa Teresa e de São Josemaria.
+LIVROS_RECOMENDADOS = {"O Castelo Interior", "Caminho"}
+
+# UC06: agendas de DEMONSTRAÇÃO das novenas, com o dia 1 deslocado em relação à
+# data de referência, para exibir situações diferentes de "Dia X de 9":
+#   Teresinha: em andamento (dia 5 na data de referência);
+#   Teresa d'Ávila: começa na data de referência (dia 1);
+#   Agostinho: ainda não começou (começa 2 dias depois).
+AGENDA_NOVENAS = {
+    "Novena a Santa Teresinha": -4,
+    "Novena a Santa Teresa d'Ávila": 0,
+    "Novena a Santo Agostinho": 2,
+}
+
+
+class EsquemaDesatualizadoError(RuntimeError):
+    """O arquivo do banco foi criado por uma versão anterior dos models."""
 
 
 # --------------------------------------------------------------------------- #
@@ -402,24 +419,48 @@ def resolver_credenciais_admin() -> tuple:
 
 
 # --------------------------------------------------------------------------- #
-# Funções de seed (idempotentes)
+# Verificação do esquema
 # --------------------------------------------------------------------------- #
-def migrar_esquema_administrador(session) -> None:
-    """Adiciona a coluna de login a bancos criados pela versão anterior.
+# Tabela -> coluna que só existe na versão atual (remodelagem UML de 30/10/2026).
+_MARCAS_DA_VERSAO_ATUAL = {
+    "Livros": "recomendado_livro",
+    "Liturgia_Dia": "id_agenda",
+    "Liturgia_Hora": "id_agenda",
+    "Administradores": "login_administrador",
+}
 
-    ``create_all`` não altera tabelas existentes; sem isto, um banco antigo
-    (Administradores só com e-mail) quebraria. Em banco novo é um no-op.
+
+def verificar_esquema(conexao) -> None:
+    """Recusa bancos criados por versões anteriores dos models.
+
+    ``create_all`` só cria tabelas que faltam; não altera as existentes. Rodar a
+    versão nova sobre um arquivo antigo misturaria esquemas. Banco vazio ou
+    inexistente passa sem erro.
     """
-    insp = inspect(session.connection())
-    if "Administradores" not in insp.get_table_names():
-        return
-    colunas = {c["name"] for c in insp.get_columns("Administradores")}
-    if "login_administrador" not in colunas:
-        session.execute(text('ALTER TABLE "Administradores" ADD COLUMN login_administrador VARCHAR'))
-        session.execute(text('CREATE UNIQUE INDEX IF NOT EXISTS uq_administradores_login '
-                             'ON "Administradores" (login_administrador)'))
+    insp = inspect(conexao)
+    tabelas = set(insp.get_table_names())
+    problemas = []
+    if "Liturgia" in tabelas:
+        problemas.append('tabela "Liturgia" (herança removida na remodelagem)')
+    for tabela, coluna in _MARCAS_DA_VERSAO_ATUAL.items():
+        if tabela in tabelas and coluna not in {c["name"] for c in insp.get_columns(tabela)}:
+            problemas.append(f'coluna "{coluna}" ausente em "{tabela}"')
+    if "Novenas" in tabelas:
+        santo = next((c for c in insp.get_columns("Novenas") if c["name"] == "id_santo"), None)
+        if santo is not None and not santo["nullable"]:
+            problemas.append('"Novenas.id_santo" ainda é obrigatório')
+    if problemas:
+        raise EsquemaDesatualizadoError(
+            "O banco foi criado por uma versão anterior do FIDES (" + "; ".join(problemas) + "). "
+            "Faça backup do arquivo (ex.: renomeie database.db para database_antigo.db) e rode "
+            "'python -m database.seeds' para criar um banco novo, ou use "
+            "'python -m database.seeds --reset' (apaga TODOS os dados). "
+            "Veja COMANDOS_ATUALIZACAO_BANCO.md.")
 
 
+# --------------------------------------------------------------------------- #
+# Funções de seed (só criam o que falta)
+# --------------------------------------------------------------------------- #
 def seed_momentos(session) -> dict:
     existentes = {m.bloco: m for m in session.scalars(select(MomentoDia))}
     for bloco in BlocoMomento:
@@ -433,21 +474,12 @@ def seed_momentos(session) -> dict:
 def seed_administrador(session, redefinir_senha: bool = False) -> Administrador:
     """Cria o administrador inicial sem duplicar e sem trocar senha existente.
 
-    * Já existe admin com o login resolvido -> mantém (senha só muda com
+    * Já existe admin com o login resolvido -> mantém (a senha só muda com
       ``redefinir_senha=True``).
-    * Existe admin da versão anterior (sem login) -> recebe o login, mantendo
-      a senha que já tinha.
     * Caso contrário, cria o administrador com o hash da senha resolvida.
     """
     login, senha, email = resolver_credenciais_admin()
     admin = session.scalar(select(Administrador).where(Administrador.login == login))
-    if admin is None:
-        admin = session.scalar(select(Administrador).where(Administrador.login.is_(None))
-                               .order_by(Administrador.id))
-        if admin is not None:  # reconciliação do administrador legado
-            admin.login = login
-            print(f"[info] Administrador da versão anterior atualizado com o login '{login}'; "
-                  "a senha anterior foi mantida (use --redefinir-senha-admin para trocá-la).")
     if admin is None:
         admin = Administrador(nome="Administrador FIDES", login=login, email=email)
         admin.definir_senha(senha)
@@ -466,31 +498,22 @@ def _oracao_geral(session, titulo: str):
 
 
 def seed_oracoes(session, momentos: dict) -> None:
-    """Cria o catálogo geral e alinha a classificação básica/complementar."""
+    """Cria o catálogo geral (básicas e complementares) com seus momentos do dia."""
     for lista, basica in ((ORACOES_BASICAS, True), (ORACOES_COMPLEMENTARES, False)):
         for item in lista:
-            oracao = _oracao_geral(session, item["titulo"])
-            if oracao is None:
-                oracao = Oracao(titulo=item["titulo"], texto=item["texto"], basica=basica)
-                session.add(oracao)
-            elif oracao.basica != basica:
-                oracao.basica = basica  # atualização controlada (classificação)
-            for bloco in item["momentos"]:  # só acrescenta; nunca remove
-                if momentos[bloco] not in oracao.momentos:
-                    oracao.momentos.append(momentos[bloco])
+            if _oracao_geral(session, item["titulo"]) is None:
+                session.add(Oracao(titulo=item["titulo"], texto=item["texto"], basica=basica,
+                                   momentos=[momentos[b] for b in item["momentos"]]))
     session.flush()
 
 
 def seed_santos(session) -> dict:
     santos = {}
     for item in SANTOS:
-        nomes = [item["nome"]] + NOMES_LEGADOS.get(item["nome"], [])
-        santo = session.scalar(select(Santo).where(Santo.nome.in_(nomes)))
+        santo = session.scalar(select(Santo).where(Santo.nome == item["nome"]))
         if santo is None:
             santo = Santo(**item)
             session.add(santo)
-        elif santo.nome != item["nome"]:
-            santo.nome = item["nome"]  # atualização controlada (grafia), mesmo registro
         santos[item["nome"]] = santo
     session.flush()
 
@@ -507,17 +530,15 @@ def seed_santos(session) -> dict:
 
 def seed_livros(session, santos: dict) -> None:
     for item in LIVROS:
-        existe = session.scalar(select(Livro).where(Livro.titulo == item["titulo"]))
+        existe = session.scalar(select(Livro).where(Livro.titulo == item["titulo"],
+                                                    Livro.autor == item["autor"]))
         if existe is None:
             session.add(Livro(
                 titulo=item["titulo"], autor=item["autor"], resumo=item["resumo"],
                 contexto_historico=item["contexto_historico"],
+                livro_recomendado=item["titulo"] in LIVROS_RECOMENDADOS,
                 santo_id=santos[item["santo"]].id if item["santo"] else None,
             ))
-        else:  # atualização controlada: acompanha a grafia do nome do santo
-            for atual, legados in NOMES_LEGADOS.items():
-                if existe.autor in legados:
-                    existe.autor = atual
     session.flush()
 
 
@@ -525,7 +546,9 @@ def seed_novenas(session, santos: dict, admin: Administrador) -> None:
     """Cadastra as novenas via ``Novena.cadastrar`` (valida token e os 9 dias)."""
     token = admin.emitir_token()
     for item in NOVENAS:
-        if session.scalar(select(Novena).where(Novena.titulo == item["titulo"])):
+        santo = santos[item["santo"]]
+        if session.scalar(select(Novena).where(Novena.titulo == item["titulo"],
+                                               Novena.santo_id == santo.id)):
             continue  # nunca reescreve uma novena existente
         base = [_oracao_geral(session, t).id for t in item.get("oracoes", ORACOES_NOVENA_PADRAO)]
         dias = []
@@ -533,62 +556,89 @@ def seed_novenas(session, santos: dict, admin: Administrador) -> None:
             ids = list(base)
             for titulo in item.get("extras", {}).get(numero, []):
                 oracao = session.scalar(select(Oracao).where(
-                    Oracao.titulo == titulo, Oracao.santo_id == santos[item["santo"]].id))
+                    Oracao.titulo == titulo, Oracao.santo_id == santo.id))
                 ids.append(oracao.id)
             dias.append({"texto_reflexao": texto, "oracoes_base_ids": ids})
         Novena.cadastrar(session, {"titulo": item["titulo"], "descricao": item["descricao"],
-                                   "santo_id": santos[item["santo"]].id, "dias": dias}, token)
+                                   "santo_id": santo.id, "dias": dias}, token)
     session.flush()
 
 
-def seed_liturgia(session, data_referencia: date | None = None) -> None:
-    """Semeia a janela de ±7 dias com liturgia de DEMONSTRAÇÃO (RNF07, MVP).
+def seed_agendas_novenas(session, admin: Administrador, data_referencia: date | None = None) -> None:
+    """UC06: agenda cada novena UMA vez (via ``Agenda.agendar_novena``).
 
+    Novena que já tem qualquer agenda (ativa, cancelada ou concluída) não é
+    reagendada: a partir daí, quem decide é o administrador.
+    """
+    token = admin.emitir_token()
+    referencia = data_referencia or date.today()
+    for titulo, deslocamento in AGENDA_NOVENAS.items():
+        novena = session.scalar(select(Novena).where(Novena.titulo == titulo))
+        if novena is None:
+            continue
+        if session.scalar(select(Agenda.id).where(Agenda.novena_id == novena.id)) is not None:
+            continue
+        Agenda.agendar_novena(session, novena.id, referencia + timedelta(days=deslocamento), token)
+    session.flush()
+
+
+def seed_liturgia(session, admin: Administrador, data_referencia: date | None = None) -> None:
+    """UC14 + RNF07: agenda a janela de ±7 dias e semeia liturgia de DEMONSTRAÇÃO.
+
+    * A janela [referência - 7, referência + 7] recebe uma agenda de LITURGIA
+      (reaproveitada se já existir com as mesmas datas).
     * Cada dia recebe uma ``LiturgiaDia`` (Primeira Leitura, Salmo e Evangelho; a
       Segunda Leitura só aos domingos, para testar US16) e as três
       ``LiturgiaHora`` (Laudes, Horas Médias e Vésperas).
-    * Os textos são fictícios e identificados como demonstração: servem para
-      testar a exibição e a navegação por datas, não substituem a liturgia oficial.
-    * Idempotente: só cria o que falta para cada data/bloco; nunca apaga nem edita.
+    * Os textos são fictícios e identificados como demonstração.
+    * Dias que já existem (de uma janela anterior) não são alterados nem movidos.
     """
+    token = admin.emitir_token()
     referencia = data_referencia or date.today()
-    for deslocamento in range(-INTERVALO_LITURGIA_DIAS, INTERVALO_LITURGIA_DIAS + 1):
-        dia = referencia + timedelta(days=deslocamento)
-        rotulo = f"{dia:%d/%m/%Y}"
-        aviso = "Texto de demonstração; não é a liturgia oficial do dia."
+    inicio = referencia - timedelta(days=INTERVALO_LITURGIA_DIAS)
+    fim = referencia + timedelta(days=INTERVALO_LITURGIA_DIAS)
+    agenda = session.scalar(select(Agenda).where(
+        Agenda.tipo == TipoAgenda.LITURGIA, Agenda.data_inicio == inicio, Agenda.data_fim == fim))
+    if agenda is None:
+        agenda = Agenda.agendar_liturgias(session, inicio, fim, token)
 
-        if session.scalar(select(LiturgiaDia).where(LiturgiaDia.data == dia)) is None:
+    aviso = "Texto de demonstração; não é a liturgia oficial do dia."
+    for deslocamento in range((fim - inicio).days + 1):
+        dia = inicio + timedelta(days=deslocamento)
+        rotulo = f"{dia:%d/%m/%Y}"
+        if session.scalar(select(LiturgiaDia.id).where(LiturgiaDia.data == dia)) is None:
             domingo = dia.weekday() == 6
-            session.add(LiturgiaDia(
-                data=dia,
-                santo_celebrado="Celebração do dia (demonstração)",
-                primeira_leitura=f"[Demonstração] Primeira Leitura de {rotulo}. {aviso}",
-                salmo=f"[Demonstração] Salmo Responsorial de {rotulo}. {aviso}",
-                evangelho=f"[Demonstração] Evangelho de {rotulo}. {aviso}",
-                segunda_leitura=(f"[Demonstração] Segunda Leitura de {rotulo} (domingo). {aviso}"
-                                 if domingo else None),
-            ))
+            LiturgiaDia.cadastrar(session, {
+                "data": dia, "agenda_id": agenda.id,
+                "santo_celebrado": "Celebração do dia (demonstração)",
+                "primeira_leitura": f"[Demonstração] Primeira Leitura de {rotulo}. {aviso}",
+                "salmo": f"[Demonstração] Salmo Responsorial de {rotulo}. {aviso}",
+                "evangelho": f"[Demonstração] Evangelho de {rotulo}. {aviso}",
+                "segunda_leitura": (f"[Demonstração] Segunda Leitura de {rotulo} (domingo). {aviso}"
+                                    if domingo else None),
+            }, token)
         for bloco in BlocoLiturgia:
-            existe = session.scalar(select(LiturgiaHora).where(
+            existe = session.scalar(select(LiturgiaHora.id).where(
                 LiturgiaHora.data == dia, LiturgiaHora.bloco == bloco))
             if existe is None:
-                session.add(LiturgiaHora(
-                    data=dia, bloco=bloco,
-                    texto=f"[Demonstração] {bloco.value} de {rotulo}. {aviso}"))
+                LiturgiaHora.cadastrar(session, {
+                    "data": dia, "agenda_id": agenda.id, "bloco": bloco,
+                    "texto": f"[Demonstração] {bloco.value} de {rotulo}. {aviso}"}, token)
     session.flush()
 
 
 def executar_seeds(session, redefinir_senha_admin: bool = False,
                    data_referencia: date | None = None) -> None:
     """Executa todos os seeds na sessão dada (sem commit)."""
-    migrar_esquema_administrador(session)
+    verificar_esquema(session.connection())
     momentos = seed_momentos(session)
     admin = seed_administrador(session, redefinir_senha_admin)
     seed_oracoes(session, momentos)
     santos = seed_santos(session)
     seed_livros(session, santos)
     seed_novenas(session, santos, admin)
-    seed_liturgia(session, data_referencia)
+    seed_agendas_novenas(session, admin, data_referencia)
+    seed_liturgia(session, admin, data_referencia)
 
 
 def popular_banco(session, redefinir_senha_admin: bool = False,
@@ -608,16 +658,24 @@ def main() -> None:
                         help="DESTRUTIVO: apaga todas as tabelas e TODOS os dados antes de recriar")
     parser.add_argument("--redefinir-senha-admin", action="store_true",
                         help="regrava a senha do administrador com o valor configurado")
-    parser.add_argument("--liturgia-referencia", type=date.fromisoformat, metavar="AAAA-MM-DD",
-                        help="data central da janela de liturgia de demonstração (padrão: hoje)")
+    parser.add_argument("--data-referencia", "--liturgia-referencia", dest="data_referencia",
+                        type=date.fromisoformat, metavar="AAAA-MM-DD",
+                        help="data central da liturgia de demonstração e base das agendas "
+                             "das novenas (padrão: hoje)")
     args = parser.parse_args()
 
     if args.reset:
         print(f"[ATENÇÃO] --reset: apagando todas as tabelas e dados de {DATABASE_URL}")
         apagar_tabelas()
+    else:
+        with engine.connect() as conexao:
+            try:
+                verificar_esquema(conexao)
+            except EsquemaDesatualizadoError as erro:
+                raise SystemExit(f"[ERRO] {erro}") from None
     criar_tabelas()
     with SessionLocal() as session:
-        popular_banco(session, args.redefinir_senha_admin, args.liturgia_referencia)
+        popular_banco(session, args.redefinir_senha_admin, args.data_referencia)
     print("Banco criado e populado com sucesso.")
 
 

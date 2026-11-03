@@ -10,13 +10,13 @@ API **somente leitura** (GET) que serve o conteúdo do banco SQLite ao Front End
 React (navegador)  --HTTP/JSON-->  api/ (FastAPI)  --SQLAlchemy-->  database/ (models, SessionLocal)  -->  SQLite
 ```
 
-| Camada       | Pasta                              | Responsabilidade |
-|--------      |-------                             |------------------|
-| Rotas        | `api/routes/`                      | Validar parâmetros, receber a sessão, chamar o serviço. Sem regra de negócio. |
-| Schemas      | `api/schemas/`                     | Contrato público (Pydantic). Nenhum objeto ORM sai da API. |
-| Serviços     | `api/services/`                    | Consultas (filtros, COUNT/LIMIT/OFFSET) e montagem das respostas. |
-| Erros/config | `api/errors.py`, `api/config.py`   | Convenção de erros e variáveis de ambiente. |
-| Persistência | `database/`                        | **Inalterada.** Sessão via `get_session()`; modelos e regras reaproveitados. |
+| Camada | Pasta | Responsabilidade |
+|---|---|---|
+| Rotas | `api/routes/` | Validar parâmetros, receber a sessão, chamar o serviço. Sem regra de negócio. |
+| Schemas | `api/schemas/` | Contrato público (Pydantic). Nenhum objeto ORM sai da API. |
+| Serviços | `api/services/` | Consultas (filtros, COUNT/LIMIT/OFFSET) e montagem das respostas. |
+| Erros/config | `api/errors.py`, `api/config.py` | Convenção de erros e variáveis de ambiente. |
+| Persistência | `database/` | **Inalterada.** Sessão via `get_session()`; modelos e regras reaproveitados. |
 
 Decisões: nenhuma segunda engine/fábrica de sessões; a API não cria tabelas, não roda seeds e não altera dados ao iniciar. Os serviços usam os métodos de leitura dos modelos (`Santo.buscar_id`, `Novena.buscar_id`, `DiaNovena.buscar_novena_dia`, `Livro.buscar_id`, `LiturgiaDia.buscar_data`, `LiturgiaHora.buscar_data`, `MomentoDia.listar_todos`). As **listagens** usam `select()` próprios porque os métodos do modelo não retornam o total exigido pela paginação.
 
@@ -179,7 +179,7 @@ Os testes da API usam SQLite **temporário em arquivo** (`criar_engine` + `criar
 
 ## 13. Desempenho (RNF01)
 
-Medição feita em 14/10/2026, no ambiente de desenvolvimento da sessão, com `scripts/medir_desempenho.py`: servidor real (`uvicorn api.main:app`, sem `--reload`) sobre banco temporário criado pelos seeds, cliente `httpx` na mesma máquina, 200 requisições sequenciais por endpoint (após 1 de aquecimento). Ambiente: Python 3.12.3, Linux, 1 CPU, SQLite em arquivo, SQLAlchemy 2.1.4, FastAPI 0.143.0. Dados: 5 santos, 12 orações, 3 novenas (27 dias), 8 livros, 60 linhas de liturgia.
+Medição feita no ambiente de desenvolvimento da sessão (a data exata não foi registrada), com `scripts/medir_desempenho.py`: servidor real (`uvicorn api.main:app`, sem `--reload`) sobre banco temporário criado pelos seeds, cliente `httpx` na mesma máquina, 200 requisições sequenciais por endpoint (após 1 de aquecimento). Ambiente: Python 3.12.3, Linux, 1 CPU, SQLite em arquivo, SQLAlchemy 2.1.4, FastAPI 0.143.0. Dados: 5 santos, 12 orações, 3 novenas (27 dias), 8 livros, 60 linhas de liturgia.
 
 | Endpoint | p50 | p95 | máx. |
 |---|---|---|---|
@@ -192,7 +192,7 @@ Medição feita em 14/10/2026, no ambiente de desenvolvimento da sessão, com `s
 | `/api/v1/novenas/1/dias/1` | 3,20 ms | 4,14 ms | 9,18 ms |
 | `/api/v1/liturgia/dia` | 2,23 ms | 2,94 ms | 4,93 ms |
 
-**Leitura:** nestas condições, todas as consultas ficaram muito abaixo de 2 s. **Limitações:** volume minúsculo de dados; sem latência de rede real, sem concorrência e sem hospedagem; uma única máquina de 1 CPU; cache do SO aquecido. O resultado é **compatível** com o objetivo, mas o RNF01 só pode ser dado como atendido após medição no ambiente de hospedagem, com rede real e catálogo maior.
+**Leitura:** nestas condições, todas as consultas ficaram muito abaixo do limite do RNF01 (2 s na lista de 11 RNFs; 3 s no PDF de histórias de usuário, que diverge). **Limitações:** volume minúsculo de dados; sem latência de rede real, sem concorrência e sem hospedagem; uma única máquina de 1 CPU; cache do SO aquecido. O resultado é **compatível** com o objetivo, mas o RNF01 só pode ser dado como atendido após medição no ambiente de hospedagem, com rede real e catálogo maior.
 
 ## 14. Limitações conhecidas
 
@@ -202,6 +202,6 @@ Medição feita em 14/10/2026, no ambiente de desenvolvimento da sessão, com `s
 4. Imagens dos santos ausentes (§10).
 5. Sem rotas administrativas, login ou escrita (US18–US22, Fase 2).
 6. Textos religiosos e reflexões dos seeds ainda aguardam revisão (pendência herdada do relatório do banco).
-7. Numeração dos RNFs: esta documentação usa a dos documentos oficiais (RNF09 = REST, RNF10 = tolerância a falhas). O relatório do banco e os comentários de `seeds.py` citam "RNF09" para o povoamento por seeds, o que diverge da lista oficial; convém corrigir no texto do TCC.
+7. **Numeração dos RNFs (corrigido):** os documentos do projeto trazem duas listas. O Relatório Técnico de elicitação (`Relatorio_Tecnico_FIDES.pdf`) traz RNF01–RNF11, com RNF09 = povoamento por seeds, RNF10 = arquitetura REST e RNF11 = tolerância a falhas; o PDF de histórias de usuário e a Proposta trazem RNF01–RNF10, com RNF09 = REST. Em versões anteriores desta documentação afirmou-se, sem base suficiente, que a citação de RNF09 para os seeds estava errada; em relação à lista de 11 itens ela está correta. Ver `docs/RELATORIO_TECNICO_BACKEND_FIDES.md`, seção de evolução documental.
 8. `HEAD` não é suportado (405). Parâmetros desconhecidos são ignorados.
 9. A API foi validada localmente; **não** está pronta para produção (hospedagem, HTTPS, CORS de produção, credenciais e imagens ainda pendentes).
