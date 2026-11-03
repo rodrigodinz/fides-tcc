@@ -28,7 +28,7 @@ def detalhar(session: Session, santo_id: int) -> SantoDetalhe:
     # Os relacionamentos do ORM só trazem registros com id_santo == santo.id.
     return SantoDetalhe(
         id=santo.id, nome=santo.nome, foto_url=santo.foto_url, biografia=santo.biografia,
-        oracoes=[OracaoDoSanto(id=o.id, titulo=o.titulo, basica=o.basica) for o in santo.obter_oracoes()],
-        novenas=[NovenaDoSanto(id=n.id, titulo=n.titulo, descricao=n.descricao) for n in santo.obter_novena()],
-        livros=[LivroDoSanto(id=l.id, titulo=l.titulo, autor=l.autor) for l in santo.obter_livro()],
+        oracoes=[OracaoDoSanto(id=o.id, titulo=o.titulo, basica=o.basica) for o in santo.ver_oracao_santo()],
+        novenas=[NovenaDoSanto(id=n.id, titulo=n.titulo, descricao=n.descricao) for n in santo.ver_novena_santo()],
+        livros=[LivroDoSanto(id=l.id, titulo=l.titulo, autor=l.autor) for l in santo.ver_livro_santo()],
     )

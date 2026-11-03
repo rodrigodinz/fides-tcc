@@ -53,7 +53,7 @@ def obter_dia(session: Session, novena_id: int, numero_dia: int) -> DiaNovenaDet
         numero_dia=dia.numero_dia, total_dias=total, texto_reflexao=dia.texto_reflexao,
         # Ordem por id = ordem de cadastro (orações-base primeiro, depois as do santo).
         oracoes=[OracaoBase(id=o.id, titulo=o.titulo, texto=o.texto)
-                 for o in sorted(dia.oracoes_base(), key=lambda o: o.id)],
+                 for o in sorted(dia.obter_oracao_base(), key=lambda o: o.id)],
         dia_anterior=dia.numero_dia - 1 if dia.numero_dia > 1 else None,
         proximo_dia=dia.numero_dia + 1 if dia.numero_dia < total else None,
     )
