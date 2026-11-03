@@ -1,5 +1,8 @@
-from pydantic import BaseModel
+from datetime import date
 
+from pydantic import BaseModel, Field
+
+from .agenda import AgendaNovena
 from .comum import SantoRef
 
 
@@ -7,13 +10,16 @@ class NovenaItem(BaseModel):
     id: int
     titulo: str
     descricao: str | None = None
-    santo: SantoRef
+    santo: SantoRef | None = None  # opcional desde a remodelagem (UML 0..1)
     total_dias: int
+    agenda: AgendaNovena | None = Field(
+        default=None, description="Agenda ativa (em andamento ou futura); null se a novena não estiver agendada.")
 
 
 class DiaResumo(BaseModel):
     id: int
     numero_dia: int
+    data: date | None = Field(default=None, description="Data do calendário deste dia, se a novena estiver agendada.")
 
 
 class NovenaRef(BaseModel):
@@ -24,6 +30,7 @@ class NovenaRef(BaseModel):
 class DiasDaNovena(BaseModel):
     novena: NovenaRef
     total_dias: int
+    agenda: AgendaNovena | None = None
     dias: list[DiaResumo]
 
 
@@ -37,6 +44,8 @@ class DiaNovenaDetalhe(BaseModel):
     novena: NovenaRef
     numero_dia: int
     total_dias: int
+    data: date | None = Field(default=None, description="Data do calendário deste dia, se a novena estiver agendada.")
+    dia_atual: int | None = Field(default=None, description="Dia atual da novena pela agenda (0-9); null se não agendada.")
     texto_reflexao: str
     oracoes: list[OracaoBase]
     dia_anterior: int | None = None  # nulo no primeiro dia

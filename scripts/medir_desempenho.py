@@ -14,7 +14,8 @@ import httpx
 
 ENDPOINTS = ["/health", "/api/v1/santos", "/api/v1/santos?q=tomas", "/api/v1/santos/1",
              "/api/v1/oracoes", "/api/v1/oracoes?momento_id=1&basica=true",
-             "/api/v1/novenas/1/dias/1", "/api/v1/liturgia/dia"]
+             "/api/v1/novenas", "/api/v1/novenas/1/dias/1", "/api/v1/livros/recomendados?santo_id=1",
+             "/api/v1/liturgia/dia", "/api/v1/agenda"]
 
 
 def percentil(valores, p):

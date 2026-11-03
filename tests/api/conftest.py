@@ -7,11 +7,12 @@ dependência ``get_session``. Nada aqui lê ou escreve o banco de desenvolviment
 from datetime import date, timedelta
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 from fides_helpers import montar_banco, montar_cliente
 from database.connection import criar_engine
-from database.models import BlocoLiturgia, LiturgiaHora
+from database.models import Administrador, Agenda, Novena, Oracao, TipoAgenda
 
 
 @pytest.fixture(scope="session")
@@ -33,19 +34,47 @@ def sessao(fabrica):
 
 @pytest.fixture(scope="session")
 def cliente_liturgia_defasada(tmp_path_factory):
-    """Liturgia semeada em torno de hoje-3: cobre hoje-10..hoje+4.
-    Logo, hoje+5..hoje+7 estão DENTRO da janela, mas SEM registro."""
+    """Seeds com data de referência hoje-3: a liturgia cobre hoje-10..hoje+4.
+    Logo, hoje+5..hoje+7 estão DENTRO da janela, mas SEM registro. As agendas
+    das novenas também ficam deslocadas 3 dias para trás."""
     referencia = date.today() - timedelta(days=3)
     return montar_cliente(montar_banco(tmp_path_factory, "defasado", referencia))
 
 
+def _token_admin(sessao):
+    """Token do administrador semeado, só para PREPARAR cenários de teste com os
+    métodos de escrita do modelo (a API não tem rotas de escrita)."""
+    return sessao.scalar(select(Administrador)).emitir_token()
+
+
 @pytest.fixture(scope="session")
-def cliente_hora_duplicada(tmp_path_factory):
-    """Banco com um bloco de LiturgiaHora repetido na mesma data (o banco permite)."""
-    fabrica = montar_banco(tmp_path_factory, "duplicado")
-    hoje = date.today()
+def cliente_cancelado(tmp_path_factory):
+    """Banco em que o administrador cancelou a agenda da novena de Santa Teresa
+    d'Ávila e a agenda de liturgia (UC07, UC09): esses conteúdos deixam de aparecer."""
+    fabrica = montar_banco(tmp_path_factory, "cancelado")
     with fabrica() as s:
-        s.add(LiturgiaHora(data=hoje, bloco=BlocoLiturgia.LAUDES, texto="[Demonstração] LAUDES duplicada"))
+        token = _token_admin(s)
+        teresa = s.scalar(select(Novena).where(Novena.titulo == "Novena a Santa Teresa d'Ávila"))
+        Agenda.buscar_ativa(s, teresa.id).cancelar(token)
+        for agenda in Agenda.listar_ativas(s, TipoAgenda.LITURGIA):
+            agenda.cancelar(token)
+        s.commit()
+    return montar_cliente(fabrica)
+
+
+@pytest.fixture(scope="session")
+def cliente_novena_sem_santo(tmp_path_factory):
+    """Banco com uma novena SEM santo (permitido desde a remodelagem, UML 0..1),
+    agendada para começar hoje."""
+    fabrica = montar_banco(tmp_path_factory, "sem_santo")
+    with fabrica() as s:
+        token = _token_admin(s)
+        pai_nosso = s.scalar(select(Oracao).where(Oracao.titulo == "Pai Nosso", Oracao.santo_id.is_(None)))
+        novena = Novena.cadastrar(s, {
+            "titulo": "Novena de teste sem santo", "descricao": "Cenário de teste.",
+            "dias": [{"texto_reflexao": f"Reflexão {n}", "oracoes_base_ids": [pai_nosso.id]}
+                     for n in range(1, 10)]}, token)
+        Agenda.agendar_novena(s, novena.id, date.today(), token)
         s.commit()
     return montar_cliente(fabrica)
 

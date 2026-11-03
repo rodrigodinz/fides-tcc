@@ -3,3 +3,6 @@ __pycache__/
 .venv/
 .pytest_cache/
 database.db
+
+backup_db/
+*.db

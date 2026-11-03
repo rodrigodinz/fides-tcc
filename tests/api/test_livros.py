@@ -67,3 +67,55 @@ def test_parametros_invalidos_422(cliente, params):
 
 def test_id_invalido_422(cliente):
     assert cliente.get(f"{URL}/abc").status_code == 422
+
+
+# ------------------- Recomendação de leitura (UC13, US12) -------------------
+REC = "/api/v1/livros/recomendados"
+
+
+def _santo_id(sessao, trecho):
+    from database.models import Santo
+    return sessao.scalar(select(Santo.id).where(Santo.nome_busca.like(f"%{trecho}%")))
+
+
+def test_recomenda_os_livros_do_santo_acessado(cliente, sessao):
+    agostinho = _santo_id(sessao, "agostinho")
+    c = cliente.get(REC, params={"santo_id": agostinho}).json()
+    esperado = set(sessao.scalars(select(Livro.titulo).where(Livro.santo_id == agostinho)))
+    assert {i["titulo"] for i in c["itens"]} == esperado and "Confissões" in esperado
+    assert all(i["santo"]["id"] == agostinho for i in c["itens"])
+
+
+def test_recomendacao_de_varios_santos_acessados(cliente, sessao):
+    ids = [_santo_id(sessao, "agostinho"), _santo_id(sessao, "josemaria"), _santo_id(sessao, "agostinho")]
+    c = cliente.get(REC, params={"santo_id": ids}).json()
+    esperado = set(sessao.scalars(select(Livro.id).where(Livro.santo_id.in_(set(ids)))))
+    assert {i["id"] for i in c["itens"]} == esperado and c["total"] == len(esperado) >= 2
+    titulos = [i["titulo"] for i in c["itens"]]
+    assert titulos == sorted(titulos)
+
+
+def test_livros_sem_santo_nunca_sao_recomendados(cliente, sessao):
+    from database.models import Santo
+    todos = list(sessao.scalars(select(Santo.id)))
+    ids = {i["id"] for i in cliente.get(REC, params={"santo_id": todos}).json()["itens"]}
+    sem_santo = set(sessao.scalars(select(Livro.id).where(Livro.santo_id.is_(None))))
+    assert sem_santo and not ids & sem_santo
+
+
+def test_recomendacao_nao_usa_a_marcacao_livro_recomendado(cliente, sessao):
+    # A decisão é recomendar pelos santos acessados; a coluna do banco não é exposta.
+    for url in (URL, REC + "?santo_id=1", f"{URL}/1"):
+        assert "recomendado" not in cliente.get(url).text
+
+
+def test_recomendacao_santo_inexistente_vazio(cliente):
+    r = cliente.get(REC, params={"santo_id": 99999})
+    assert r.status_code == 200 and r.json()["itens"] == []
+
+
+@pytest.mark.parametrize("params", [{}, {"santo_id": 0}, {"santo_id": "x"},
+                                    {"santo_id": list(range(1, 22))}, {"santo_id": 1, "limite": 21}])
+def test_recomendacao_parametros_invalidos_422(cliente, params):
+    r = cliente.get(REC, params=params)
+    assert r.status_code == 422 and r.json()["erro"]["codigo"] == "PARAMETRO_INVALIDO"

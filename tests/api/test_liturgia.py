@@ -58,7 +58,7 @@ def test_horas_em_ordem_canonica_independente_da_insercao(cliente):
     h = cliente.get(HORAS).json()
     assert [x["bloco"]["codigo"] for x in h["horas"]] == CODIGOS
     assert [x["bloco"]["nome"] for x in h["horas"]] == [b.value for b in BlocoLiturgia]
-    assert h["aviso"] and h["avisos_integridade"] == []
+    assert h["aviso"] and set(h) == {"data", "intervalo", "horas", "aviso"}
 
 
 @pytest.mark.parametrize("codigo", CODIGOS)
@@ -96,15 +96,15 @@ def test_data_valida_sem_registro_e_404_diferente_de_fora_da_janela(cliente_litu
     assert c.get(DIA, params={"data": _d(4)}).status_code == 200  # último dia semeado
 
 
-def test_bloco_repetido_nao_causa_500_e_o_problema_e_sinalizado(cliente_hora_duplicada):
-    r = cliente_hora_duplicada.get(HORAS)
-    assert r.status_code == 200
-    h = r.json()
-    assert [x["bloco"]["codigo"] for x in h["horas"]] == CODIGOS  # um por bloco, em ordem
-    assert len(h["avisos_integridade"]) == 1 and "Laudes" in h["avisos_integridade"][0]
-    laudes = h["horas"][0]["texto"]
-    assert "duplicada" not in laudes  # prevalece o registro mais antigo (menor id)
-    filtrado = cliente_hora_duplicada.get(HORAS, params={"bloco": "laudes"}).json()
-    assert len(filtrado["horas"]) == 1 and filtrado["avisos_integridade"]
-    outro = cliente_hora_duplicada.get(HORAS, params={"bloco": "vesperas"}).json()
-    assert outro["avisos_integridade"] == []
+def test_agenda_de_liturgia_cancelada_oculta_a_liturgia(cliente_cancelado):
+    # O modelo deixa de exibir registros de agenda cancelada: para a API é "sem registro" (404),
+    # e não "fora da janela" (400).
+    for url in (DIA, HORAS):
+        r = cliente_cancelado.get(url)
+        assert r.status_code == 404 and r.json()["erro"]["codigo"] == "LITURGIA_NAO_CADASTRADA"
+    assert cliente_cancelado.get(DIA, params={"data": _d(9)}).status_code == 400
+
+
+def test_bloco_sem_registro_404_com_bloco(cliente_liturgia_defasada):
+    r = cliente_liturgia_defasada.get(HORAS, params={"data": _d(6), "bloco": "laudes"})
+    assert r.status_code == 404 and r.json()["erro"]["codigo"] == "LITURGIA_NAO_CADASTRADA"

@@ -66,7 +66,9 @@ def test_somente_get_no_openapi(cliente):
 
 @pytest.mark.parametrize("metodo", ["post", "put", "patch", "delete"])
 @pytest.mark.parametrize("caminho", ["/health", "/api/v1/santos", "/api/v1/oracoes", "/api/v1/novenas",
-                                     "/api/v1/livros", "/api/v1/liturgia/dia", "/api/v1/santos/1"])
+                                     "/api/v1/livros", "/api/v1/liturgia/dia", "/api/v1/santos/1",
+                                     "/api/v1/agenda", "/api/v1/livros/recomendados",
+                                     "/api/v1/novenas/1/dias"])
 def test_metodos_de_escrita_rejeitados(cliente, metodo, caminho):
     assert getattr(cliente, metodo)(caminho).status_code in (404, 405)
 
@@ -120,7 +122,8 @@ def test_static_serve_arquivo_do_diretorio_configurado(monkeypatch, tmp_path, fa
 
 
 def test_static_arquivo_ausente_e_404_padronizado(cliente):
-    r = cliente.get("/static/santos/tomas-de-aquino.jpg")
+    # Nome que nunca existirá: as imagens reais dos santos podem (e devem) estar na pasta.
+    r = cliente.get("/static/santos/__arquivo_inexistente_teste__.jpg")
     assert r.status_code == 404
     assert "erro" in r.json()
 
