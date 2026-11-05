@@ -13,5 +13,4 @@ def normalizar_busca(texto: str) -> str:
 
 
 def escapar_like(termo: str) -> str:
-    """Escapa %, _ e a própria barra para uso com ``like(..., escape="\\\\")``."""
     return termo.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")

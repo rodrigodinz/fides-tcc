@@ -18,10 +18,10 @@ from .liturgia import AVISO_DEMONSTRACAO, horas_em_ordem, intervalo, leituras
 
 def consultar(session: Session, data: date | None) -> AgendaDoDia:
     data = data or date.today()
-    dia = LiturgiaDia.buscar_data(session, data)  # valida a janela (ForaDoIntervaloError -> 400)
+    dia = LiturgiaDia.buscar_data(session, data)
     horas = LiturgiaHora.buscar_data(session, data)
     return AgendaDoDia(
-        data=data, intervalo=intervalo(), aviso=AVISO_DEMONSTRACAO,
+        data=data, intervalo=intervalo(),
         liturgia_dia=leituras(dia) if dia is not None else None,
         liturgia_horas=horas_em_ordem(horas),
         novenas_em_andamento=novenas_em_andamento(session, data),

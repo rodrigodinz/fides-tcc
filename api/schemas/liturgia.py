@@ -5,12 +5,12 @@ from pydantic import BaseModel, Field
 
 class IntervaloLiturgia(BaseModel):
     hoje: date
-    inicio: date = Field(description="Primeira data consultável (hoje - 7 dias).")
-    fim: date = Field(description="Última data consultável (hoje + 7 dias).")
+    inicio: date = Field(description="Primeira dia da liturgia (Hoje - 7 dias).")
+    fim: date = Field(description="Última dia da liturgia (hoje + 7 dias).")
 
 
 class BlocoRef(BaseModel):
-    codigo: str  # laudes | horas_medias | vesperas
+    codigo: str  # laudes, horas_medias, vesperas
     nome: str
 
 
@@ -31,7 +31,7 @@ class LeiturasDoDia(BaseModel):
     primeira_leitura: str | None = None
     salmo: str | None = None
     evangelho: str | None = None
-    segunda_leitura: str | None = None  # só quando cadastrada (domingos/festividades)
+    segunda_leitura: str | None = None
     possui_segunda_leitura: bool
 
 

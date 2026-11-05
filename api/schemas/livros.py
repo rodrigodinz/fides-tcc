@@ -7,7 +7,7 @@ class LivroItem(BaseModel):
     id: int
     titulo: str
     autor: str
-    santo: SantoRef | None = None  # nulo em obras gerais (ex.: Scott Hahn)
+    santo: SantoRef | None = None  # nulo em livros que nao tem um santo
 
 
 class LivroDetalhe(LivroItem):

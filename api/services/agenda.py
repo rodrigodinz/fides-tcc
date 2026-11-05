@@ -21,7 +21,6 @@ def santo_ref(santo) -> SantoRef | None:
 
 
 def agenda_da_novena(session: Session, novena: Novena, hoje: date | None = None) -> AgendaNovena | None:
-    """Agenda ativa (em andamento ou futura) da novena, ou ``None``."""
     agenda = Agenda.buscar_ativa(session, novena.id, hoje=hoje)
     if agenda is None:
         return None
@@ -36,12 +35,12 @@ def data_do_dia(agenda: AgendaNovena | None, numero_dia: int) -> date | None:
 
 
 def novenas_em_andamento(session: Session, data: date) -> list[NovenaEmAndamento]:
-    """Novenas cujo período agendado contém ``data`` (dia 1 a 9 nessa data)."""
+    """Novenas que o período tem a data ativa, tipo, que ja comecou (dia 1 a 9 nessa data)."""
     resultado = []
     for agenda in Agenda.listar_ativas(session, TipoAgenda.NOVENA, hoje=data):
         dia = agenda.calcular_dia_atual(hoje=data)
         if dia < 1 or agenda.novena is None:
-            continue  # ainda não começou nessa data (ou novena removida)
+            continue  # ainda não começou nessa data
         novena = agenda.novena
         resultado.append(NovenaEmAndamento(
             novena=NovenaNaAgenda(id=novena.id, titulo=novena.titulo, santo=santo_ref(novena.santo)),

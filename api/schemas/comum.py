@@ -9,9 +9,9 @@ T = TypeVar("T")
 class Pagina(BaseModel, Generic[T]):
     itens: list[T]
     pagina: int = Field(description="Página atual (começa em 1).")
-    limite: int = Field(description="Itens por página (máximo 20).")
-    total: int = Field(description="Total de registros que atendem aos filtros.")
-    total_paginas: int = Field(description="Total de páginas (0 quando não há registros).")
+    limite: int = Field(description="Itens por página (20 no máximo).")
+    total: int = Field(description="Total de registros que contemplam aos filtros.")
+    total_paginas: int = Field(description="Total de páginas.")
 
 
 class SantoRef(BaseModel):
@@ -21,7 +21,7 @@ class SantoRef(BaseModel):
 
 class ErroDetalhe(BaseModel):
     campo: str | None = None
-    local: str | None = Field(default=None, description="query, path, etc.")
+    local: str | None = Field(default=None, description="onde aconteceu o erro")
     mensagem: str
 
 

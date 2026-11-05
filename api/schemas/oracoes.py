@@ -5,8 +5,8 @@ from .comum import SantoRef
 
 class MomentoItem(BaseModel):
     id: int
-    codigo: str  # ex.: ao_acordar (derivado do enum BlocoMomento)
-    nome: str    # ex.: "Ao acordar"
+    codigo: str  # tipo, ao acordar
+    nome: str    # tipo, "Ao acordar"
 
 
 class OracaoItem(BaseModel):
@@ -14,5 +14,5 @@ class OracaoItem(BaseModel):
     titulo: str
     texto: str
     basica: bool
-    santo: SantoRef | None = None  # nulo nas orações gerais (ex.: Pai Nosso)
+    santo: SantoRef | None = None  #Nulo nas oracoes gerais, tipo pai nosso
     momentos: list[MomentoItem]

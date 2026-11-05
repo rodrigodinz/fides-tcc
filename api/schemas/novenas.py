@@ -10,16 +10,16 @@ class NovenaItem(BaseModel):
     id: int
     titulo: str
     descricao: str | None = None
-    santo: SantoRef | None = None  # opcional desde a remodelagem (UML 0..1)
+    santo: SantoRef | None = None  # opcional, segundo a alexandra K
     total_dias: int
     agenda: AgendaNovena | None = Field(
-        default=None, description="Agenda ativa (em andamento ou futura); null se a novena não estiver agendada.")
+        default=None, description="Agenda ativa (em andamento ou futura); null se a novena não estiver ativa.")
 
 
 class DiaResumo(BaseModel):
     id: int
     numero_dia: int
-    data: date | None = Field(default=None, description="Data do calendário deste dia, se a novena estiver agendada.")
+    data: date | None = Field(default=None, description="Data do calendário deste dia, se a novena estiver ativa.")
 
 
 class NovenaRef(BaseModel):
@@ -44,8 +44,8 @@ class DiaNovenaDetalhe(BaseModel):
     novena: NovenaRef
     numero_dia: int
     total_dias: int
-    data: date | None = Field(default=None, description="Data do calendário deste dia, se a novena estiver agendada.")
-    dia_atual: int | None = Field(default=None, description="Dia atual da novena pela agenda (0-9); null se não agendada.")
+    data: date | None = Field(default=None, description="Data do calendário deste dia, se a novena estiver ativa.")
+    dia_atual: int | None = Field(default=None, description="Dia atual da novena pela agenda (0-9); null se não ativa.")
     texto_reflexao: str
     oracoes: list[OracaoBase]
     dia_anterior: int | None = None  # nulo no primeiro dia

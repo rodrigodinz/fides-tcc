@@ -26,10 +26,10 @@ class BlocoParam(str, enum.Enum):
 
 @router.get("/horas", response_model=LiturgiaHorasResposta, summary="Liturgia das Horas (US14, US17)")
 def liturgia_das_horas(session: Sessao, data: Data = None,
-                       bloco: Annotated[BlocoParam | None, Query(description="Filtra um bloco canônico.")] = None):
+                       bloco: Annotated[BlocoParam | None, Query(description="Filtra um bloco")] = None):
     return servico.consultar_horas(session, data, BlocoLiturgia[bloco.name.upper()] if bloco else None)
 
 
-@router.get("/dia", response_model=LiturgiaDiaResposta, summary="Liturgia do Dia (US15, US16, US17)")
+@router.get("/dia", response_model=LiturgiaDiaResposta, summary="Liturgia do Dia")
 def liturgia_do_dia(session: Sessao, data: Data = None):
     return servico.consultar_dia(session, data)

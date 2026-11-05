@@ -26,7 +26,7 @@ def listar(session: Session, params: ParamsPaginacao, santo_id: int | None) -> P
 
 
 def _obter(session: Session, novena_id: int) -> Novena:
-    novena = Novena.buscar_id(session, novena_id)  # método do modelo
+    novena = Novena.buscar_id(session, novena_id)
     if novena is None:
         raise nao_encontrado("Novena")
     return novena
@@ -49,7 +49,7 @@ def listar_dias(session: Session, novena_id: int) -> DiasDaNovena:
 def obter_dia(session: Session, novena_id: int, numero_dia: int) -> DiaNovenaDetalhe:
     novena = _obter(session, novena_id)
     dia = DiaNovena.buscar_novena_dia(session, novena_id, numero_dia)  # método do modelo
-    if dia is None:  # só ocorreria se o banco tivesse menos de 9 dias (o cadastro exige 9)
+    if dia is None:
         raise nao_encontrado("Dia da novena")
     total = len(novena.dias)
     agenda = agenda_da_novena(session, novena)
@@ -59,7 +59,7 @@ def obter_dia(session: Session, novena_id: int, numero_dia: int) -> DiaNovenaDet
         data=data_do_dia(agenda, dia.numero_dia),
         dia_atual=agenda.dia_atual if agenda else None,
         texto_reflexao=dia.texto_reflexao,
-        # Ordem por id = ordem de cadastro (orações-base primeiro, depois as do santo).
+        # Ordem por id = por ordem do cadastro.
         oracoes=[OracaoBase(id=o.id, titulo=o.titulo, texto=o.texto)
                  for o in sorted(dia.obter_oracao_base(), key=lambda o: o.id)],
         dia_anterior=dia.numero_dia - 1 if dia.numero_dia > 1 else None,

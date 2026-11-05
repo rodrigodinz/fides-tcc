@@ -21,9 +21,9 @@ from ..errors import ApiError
 from ..schemas.liturgia import (BlocoRef, HoraItem, IntervaloLiturgia, LeiturasDoDia,
                                 LiturgiaDiaResposta, LiturgiaHorasResposta)
 
-# REMOVER/SUBSTITUIR NA FASE 2, quando houver fonte oficial de liturgia aprovada.
+# Remover esse texto na Fase 2 do projeto
 AVISO_DEMONSTRACAO = ("Conteúdo de demonstração: estes textos não correspondem à liturgia oficial. "
-                      "Serão substituídos por fonte oficial em versão futura.")
+                      "Serão substituídos por fonte oficial na Fase 2 do Fides.")
 
 ORDEM_CANONICA = {bloco: i for i, bloco in enumerate(BlocoLiturgia)}  # Laudes, Horas médias, Vésperas
 
@@ -36,21 +36,19 @@ def intervalo() -> IntervaloLiturgia:
 
 def _sem_registro(data: date) -> ApiError:
     return ApiError(404, "LITURGIA_NAO_CADASTRADA",
-                    f"Não há liturgia cadastrada para {data.isoformat()}, embora a data esteja "
-                    "dentro do intervalo de consulta.")
+                    f"Não há liturgia cadastrada para {data.isoformat()}.")
 
 
 def leituras(dia: LiturgiaDia) -> LeiturasDoDia:
     return LeiturasDoDia(
         santo_celebrado=dia.santo_celebrado, primeira_leitura=dia.primeira_leitura,
         salmo=dia.salmo, evangelho=dia.evangelho,
-        # segunda leitura: apenas o que está cadastrado, sem inventar nada
         segunda_leitura=dia.segunda_leitura if dia.possui_segunda_leitura() else None,
         possui_segunda_leitura=dia.possui_segunda_leitura())
 
 
 def horas_em_ordem(registros) -> list[HoraItem]:
-    """Blocos na ordem canônica (Laudes, Horas médias, Vésperas), não na de inserção."""
+    """Blocos na ordem canônica (Laudes, Horas médias, Vésperas)."""
     return [HoraItem(bloco=BlocoRef(codigo=r.bloco.name.lower(), nome=r.bloco.value), texto=r.texto)
             for r in sorted(registros, key=lambda r: ORDEM_CANONICA[r.bloco])]
 
@@ -70,7 +68,7 @@ def consultar_horas(session: Session, data: date | None, bloco: BlocoLiturgia | 
 
 def consultar_dia(session: Session, data: date | None) -> LiturgiaDiaResposta:
     data = data or date.today()
-    dia = LiturgiaDia.buscar_data(session, data)  # valida a janela (ForaDoIntervaloError)
+    dia = LiturgiaDia.buscar_data(session, data)  # valida a janela
     if dia is None:
         raise _sem_registro(data)
     return LiturgiaDiaResposta(data=data, intervalo=intervalo(), aviso=AVISO_DEMONSTRACAO,

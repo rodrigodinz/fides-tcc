@@ -16,14 +16,14 @@ router = APIRouter(prefix="/santos", tags=["Santos"], responses=RESPOSTAS_ERRO)
 Sessao = Annotated[Session, Depends(get_session)]
 
 
-@router.get("", response_model=Pagina[SantoResumo], summary="Lista/pesquisa santos (US01, US02)")
+@router.get("", response_model=Pagina[SantoResumo], summary="Lista/pesquisa santos")
 def listar_santos(
     session: Sessao, paginacao: Paginacao,
-    q: Annotated[str | None, Query(max_length=100, description="Nome (parcial; ignora acento e caixa).")] = None,
+    q: Annotated[str | None, Query(max_length=100, description="Nome")] = None,
 ):
     return servico.listar(session, paginacao, q)
 
 
-@router.get("/{santo_id}", response_model=SantoDetalhe, summary="Detalhe de um santo (US03)")
+@router.get("/{santo_id}", response_model=SantoDetalhe, summary="Detalhes de um santo")
 def detalhar_santo(session: Sessao, santo_id: Annotated[int, Path(ge=1)]):
     return servico.detalhar(session, santo_id)

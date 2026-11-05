@@ -1,4 +1,3 @@
-# Conexão com o banco de dados do FIDES (SQLite + SQLAlchemy).
 import os
 from pathlib import Path
 
@@ -12,8 +11,6 @@ Base = declarative_base()
 
 
 def criar_engine(url: str = DATABASE_URL, echo: bool = False):
-    # O SQLite ignora FOREIGN KEY por padrão; o PRAGMA ativa a integridade referencial
-    # (inclusive ON DELETE CASCADE / SET NULL) em toda conexão.
     engine = create_engine(url, echo=echo, connect_args={"check_same_thread": False})
 
     @event.listens_for(engine, "connect")
@@ -39,14 +36,12 @@ def get_session():
 
 def criar_tabelas(alvo=None):
     # Cria só as tabelas que faltam; NÃO altera tabelas que já existem.
-    from . import models  # noqa: F401
+    from . import models 
 
     Base.metadata.create_all(bind=alvo or engine)
 
 
 def apagar_tabelas(alvo=None):
-    # DESTRUTIVO. Apaga TODAS as tabelas do arquivo, inclusive as de versões
-    # anteriores que os models atuais não conhecem (ex.: "Liturgia").
     alvo = alvo or engine
     existentes = MetaData()
     existentes.reflect(bind=alvo)

@@ -28,7 +28,6 @@ def listar(session: Session, params: ParamsPaginacao, basica: bool | None,
     if santo_id is not None:
         consulta = consulta.where(Oracao.santo_id == santo_id)
     if momento_id is not None:
-        # N:N via Oracao_Momento_Dia; filtrando por UM id não há duplicatas de linha.
         consulta = consulta.join(Oracao.momentos).where(MomentoDia.id == momento_id)
     consulta = consulta.order_by(Oracao.titulo, Oracao.id)
     return paginar(session, consulta, params, _oracao,

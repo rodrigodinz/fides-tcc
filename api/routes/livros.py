@@ -18,7 +18,7 @@ Sessao = Annotated[Session, Depends(get_session)]
 MAX_SANTOS_RECOMENDACAO = 20
 
 
-@router.get("", response_model=Pagina[LivroItem], summary="Catálogo de livros (US11, US12)")
+@router.get("", response_model=Pagina[LivroItem], summary="Catálogo de livros")
 def listar_livros(session: Sessao, paginacao: Paginacao,
                   santo_id: Annotated[int | None, Query(ge=1)] = None):
     return servico.listar(session, paginacao, santo_id)
@@ -26,17 +26,17 @@ def listar_livros(session: Sessao, paginacao: Paginacao,
 
 # Declarada antes de /{livro_id}, senão "recomendados" seria lido como id.
 @router.get("/recomendados", response_model=Pagina[LivroItem],
-            summary="Recomendação de leitura pelos santos acessados (UC13, US12)")
+            summary="Recomendação de leitura")
 def livros_recomendados(
     session: Sessao, paginacao: Paginacao,
     santo_id: Annotated[list[Annotated[int, Field(ge=1)]],
                         Query(min_length=1, max_length=MAX_SANTOS_RECOMENDACAO,
-                              description="Ids dos santos acessados; repita o parâmetro "
+                              description="Ids dos santos acessados recentemente. Ex.:"
                                           "(?santo_id=4&santo_id=1).")],
 ):
     return servico.recomendados(session, paginacao, santo_id)
 
 
-@router.get("/{livro_id}", response_model=LivroDetalhe, summary="Detalhe: resumo e contexto histórico (US13)")
+@router.get("/{livro_id}", response_model=LivroDetalhe, summary="Detalhe: resumo e contexto histórico")
 def detalhar_livro(session: Sessao, livro_id: Annotated[int, Path(ge=1)]):
     return servico.detalhar(session, livro_id)

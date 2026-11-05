@@ -40,18 +40,15 @@ def get_settings() -> Settings:
 def aplicar_fuso_horario(nome: str) -> bool:
     """Ajusta o fuso do processo para que ``date.today()`` seja a data do Brasil.
 
-    O modelo (``Liturgia._dentro_intervalo``) usa ``date.today()``. Em vez de
-    criar uma segunda regra de intervalo na API, o fuso do próprio processo é
-    ajustado, de modo que o modelo e a API enxerguem a mesma data. Só funciona
+    O modelo (``Liturgia._dentro_intervalo``) usa ``date.today()``. Só funciona
     onde existe ``time.tzset`` (Linux/macOS); no Windows vale o fuso do sistema.
-    Retorna True se o fuso foi aplicado.
     """
     if not hasattr(time, "tzset"):
         logger.info("time.tzset indisponível; usando o fuso do sistema operacional.")
         return False
     try:
         from zoneinfo import ZoneInfo
-        ZoneInfo(nome)  # valida o nome (o glibc ignoraria silenciosamente um nome inválido)
+        ZoneInfo(nome)  # valida o nome
     except Exception:
         logger.warning("FIDES_TIMEZONE inválido ('%s'); mantendo o fuso atual.", nome)
         return False

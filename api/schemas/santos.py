@@ -5,7 +5,7 @@ class SantoResumo(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     nome: str
-    foto_url: str | None = None  # caminho relativo (ex.: /static/santos/x.jpg); pode não existir em disco
+    foto_url: str | None = None  # caminho relativo (ex.: /static/santos/x.jpg); pode não existir em disco | A gente vai ter que colocar as imagens que vão estar no git ou no pen drive no computador, no dia da apresentacao
 
 
 class OracaoDoSanto(BaseModel):

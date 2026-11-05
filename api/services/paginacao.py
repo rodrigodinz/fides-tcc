@@ -11,7 +11,7 @@ from database.models import LIMITE_MAXIMO_POR_PAGINA
 
 from ..schemas.comum import Pagina
 
-PAGINA_MAXIMA = 1_000_000  # evita OFFSET astronômico (estouro de inteiro no SQLite)
+PAGINA_MAXIMA = 1_000_000
 
 
 @dataclass(frozen=True)
@@ -21,9 +21,9 @@ class ParamsPaginacao:
 
 
 def params_paginacao(
-    pagina: Annotated[int, Query(ge=1, le=PAGINA_MAXIMA, description="Página (começa em 1).")] = 1,
+    pagina: Annotated[int, Query(ge=1, le=PAGINA_MAXIMA, description="Página começa em 1.")] = 1,
     limite: Annotated[int, Query(ge=1, le=LIMITE_MAXIMO_POR_PAGINA,
-                                 description="Itens por página (1 a 20).")] = LIMITE_MAXIMO_POR_PAGINA,
+                                 description="Itens por página (20, no caso).")] = LIMITE_MAXIMO_POR_PAGINA,
 ) -> ParamsPaginacao:
     return ParamsPaginacao(pagina, limite)
 
@@ -33,10 +33,6 @@ Paginacao = Annotated[ParamsPaginacao, Depends(params_paginacao)]
 
 def paginar(session: Session, consulta: Select, params: ParamsPaginacao,
             converter: Callable, opcoes: tuple = ()) -> Pagina:
-    """``consulta`` já traz filtros e ORDER BY; ``opcoes`` são loaders (só na consulta dos itens).
-
-    A contagem usa exatamente os mesmos filtros da listagem.
-    """
     total = session.scalar(select(func.count()).select_from(consulta.order_by(None).subquery())) or 0
     itens = session.scalars(
         consulta.options(*opcoes).limit(params.limite).offset((params.pagina - 1) * params.limite)

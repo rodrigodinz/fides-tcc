@@ -19,7 +19,7 @@ SituacaoNovena = Literal["em_andamento", "agendada"]
 class AgendaNovena(BaseModel):
     id: int
     data_inicio: date = Field(description="Data do dia 1 da novena.")
-    data_fim: date = Field(description="Data do dia 9 (início + 8 dias).")
+    data_fim: date = Field(description="Data do dia 9 (início + 8 dias)")
     dia_atual: int = Field(description="1 a 9 durante a novena; 0 se ainda não começou.")
     situacao: SituacaoNovena = Field(description="em_andamento (dia 1-9 hoje) ou agendada (começa depois).")
 
@@ -40,14 +40,13 @@ class NovenaEmAndamento(BaseModel):
 
 
 class AgendaDoDia(BaseModel):
-    """Tudo o que a agenda reserva para uma data: liturgia e novenas em andamento."""
 
     data: date
     intervalo: IntervaloLiturgia
     liturgia_dia: LeiturasDoDia | None = Field(
-        default=None, description="Liturgia do Dia da data; null se não houver registro.")
+        default=None, description="Leituras do dia.")
     liturgia_horas: list[HoraItem] = Field(
-        default=[], description="Blocos da Liturgia das Horas em ordem canônica; vazio se não houver registro.")
+        default=[], description="Liturgia das Horas em ordem canônica.")
     novenas_em_andamento: list[NovenaEmAndamento] = Field(
-        default=[], description="Novenas cujo período agendado contém a data.")
+        default=[], description="Novenas que o período agendado tem a data.")
     aviso: str

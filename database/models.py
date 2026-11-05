@@ -59,54 +59,48 @@ from sqlalchemy.orm import object_session, relationship, validates
 
 from .connection import Base
 
-# --------------------------------------------------------------------------- #
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ #
 # Constantes de negócio (RNFs)
-# --------------------------------------------------------------------------- #
-LIMITE_MAXIMO_POR_PAGINA = 20  # RNF02 - paginação de no máximo 20 itens
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ #
+LIMITE_MAXIMO_POR_PAGINA = 20
 INTERVALO_LITURGIA_DIAS = 7  # RNF07 - 1 semana para trás e para frente
 DIAS_DA_NOVENA = 9
 TOKEN_VALIDADE_SEGUNDOS = 3600
 SECRET_KEY = os.getenv("FIDES_SECRET_KEY", "dev-only-troque-em-producao")
 
 
-# --------------------------------------------------------------------------- #
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 # Exceções de domínio
-# --------------------------------------------------------------------------- #
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 class AutenticacaoError(Exception):
-    """Credenciais inválidas ou token ausente/expirado/adulterado (RNF05)."""
+    """Credenciais inválidas ou token expirado."""
 
 
 class DadosInvalidosError(ValueError):
-    """Dados de cadastro/atualização incompletos ou inconsistentes."""
+    """Dados de cadastro incompletos."""
 
 
 class RegistroDuplicadoError(DadosInvalidosError):
-    """Operação que viola uma regra de unicidade.
-
-    Após este erro a transação da sessão deve ser desfeita (``rollback``).
-    """
+    """Operação que viola uma regra de unicidade"""
 
 
 class RegistroNaoEncontradoError(DadosInvalidosError):
-    """O registro informado (por id) não existe."""
+    """O registro informado não existe."""
 
 
 class ForaDoIntervaloError(ValueError):
-    """Data fora da janela de ±1 semana da liturgia (RNF07)."""
+    """Data fora da janela de ±1 semana da liturgia"""
 
     def __init__(self):
         super().__init__(
-            "Esta data está fora do intervalo disponível na versão de "
-            "demonstração (1 semana antes e 1 semana depois de hoje)."
+            "Esta data está fora do intervalo disponível na fase 1 do Fides."
         )
 
 
-# --------------------------------------------------------------------------- #
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ #
 # Enums
-# --------------------------------------------------------------------------- #
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ #
 class BlocoMomento(enum.Enum):
-    """Enum ``MomentoDoDia`` da UML (inalterado em relação à versão anterior)."""
-
     AO_ACORDAR = "Ao acordar"
     REFEICOES = "Refeições"
     MISSA = "Missa"
@@ -114,33 +108,26 @@ class BlocoMomento(enum.Enum):
 
 
 class BlocoLiturgia(enum.Enum):
-    """Enum ``LiturgiaHora.bloco`` da UML (Laudes, HorasMedias, Vesperas)."""
-
     LAUDES = "Laudes"
     HORAS_MEDIAS = "Horas médias"
     VESPERAS = "Vésperas"
 
 
 class TipoAgenda(enum.Enum):
-    """Enum ``Agenda.tipo`` da UML."""
-
     NOVENA = "Novena"
     LITURGIA = "Liturgia"
 
 
 class StatusAgenda(enum.Enum):
-    """Enum ``Agenda.status`` da UML."""
-
     ATIVA = "Ativa"
     CANCELADA = "Cancelada"
     CONCLUIDA = "Concluída"
 
 
-# --------------------------------------------------------------------------- #
-# Helpers internos
-# --------------------------------------------------------------------------- #
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ #
+# Normalizações do Código
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ #
 def _normalizar(texto: str) -> str:
-    """Minúsculas e sem acentos, para buscas ('Tomas' encontra 'Tomás')."""
     sem_acento = unicodedata.normalize("NFKD", texto).encode("ascii", "ignore").decode()
     return sem_acento.lower().strip()
 
@@ -154,27 +141,21 @@ def _paginar(consulta, pagina: int = 1, limite: int = LIMITE_MAXIMO_POR_PAGINA):
 def _exigir_campos(dados: dict, *campos: str) -> None:
     faltando = [c for c in campos if not dados.get(c)]
     if faltando:
-        raise DadosInvalidosError(f"Campos obrigatórios ausentes: {', '.join(faltando)}")
+        raise DadosInvalidosError(f"Campos obrigatórios que estao faltando: {', '.join(faltando)}")
 
 
 def _validar_alteracoes(dados, editaveis, obrigatorios=()) -> None:
-    """Regras comuns aos métodos ``atualizar`` (atualização parcial).
-
-    Só os campos presentes em ``dados`` são alterados. Campos fora de
-    ``editaveis`` são rejeitados, e campos obrigatórios não podem ficar vazios.
-    """
     if not isinstance(dados, dict) or not dados:
         raise DadosInvalidosError("Informe ao menos um campo para atualizar.")
     desconhecidos = sorted(set(dados) - set(editaveis))
     if desconhecidos:
-        raise DadosInvalidosError(f"Campos não editáveis ou desconhecidos: {', '.join(desconhecidos)}")
+        raise DadosInvalidosError(f"Campos desconhecidos: {', '.join(desconhecidos)}")
     vazios = [c for c in obrigatorios if c in dados and not dados[c]]
     if vazios:
-        raise DadosInvalidosError(f"Campos obrigatórios não podem ficar vazios: {', '.join(vazios)}")
+        raise DadosInvalidosError(f"Campos obrigatórios não podem ficar vazios, Johnson: {', '.join(vazios)}")
 
 
 def _persistir(session, objeto, descricao: str) -> None:
-    """``add`` + ``flush`` traduzindo violações de unicidade em erro de domínio."""
     session.add(objeto)
     try:
         session.flush()
@@ -186,7 +167,6 @@ def _persistir(session, objeto, descricao: str) -> None:
 
 
 def _remover(session, objeto, descricao: str) -> None:
-    """``delete`` + ``flush`` traduzindo violações de integridade."""
     session.delete(objeto)
     try:
         session.flush()
@@ -194,8 +174,7 @@ def _remover(session, objeto, descricao: str) -> None:
         mensagem = str(erro.orig).upper()
         if "UNIQUE" in mensagem or "DUPLICATE" in mensagem:
             raise RegistroDuplicadoError(
-                f"Não foi possível excluir {descricao}: um conteúdo vinculado ficaria "
-                "com título repetido ao perder o vínculo.") from erro
+                f"Não foi possível excluir {descricao}.") from erro
         if "FOREIGN KEY" in mensagem:
             raise DadosInvalidosError(
                 f"Não foi possível excluir {descricao}: há registros vinculados.") from erro
@@ -205,24 +184,23 @@ def _remover(session, objeto, descricao: str) -> None:
 def _sessao_de(objeto):
     session = object_session(objeto)
     if session is None:
-        raise DadosInvalidosError("O registro precisa estar associado a uma sessão do banco.")
+        raise DadosInvalidosError("O registro precisa estar associado a uma sessão do banco")
     return session
 
 
 def _buscar_ou_erro(session, modelo, id_registro, nome: str):
     registro = session.get(modelo, id_registro) if id_registro is not None else None
     if registro is None:
-        raise RegistroNaoEncontradoError(f"{nome} {id_registro} não encontrado(a).")
+        raise RegistroNaoEncontradoError(f"{nome} {id_registro} não encontrado")
     return registro
 
 
 def _validar_santo(session, santo_id) -> None:
     if santo_id is not None and session.get(Santo, santo_id) is None:
-        raise DadosInvalidosError(f"Santo {santo_id} não encontrado.")
+        raise DadosInvalidosError(f"Santo {santo_id} não encontrado")
 
 
 def _converter_data(valor, campo: str = "data") -> date:
-    """Aceita ``date`` (ou ``datetime``) e texto ISO ``AAAA-MM-DD``."""
     if isinstance(valor, datetime):
         return valor.date()
     if isinstance(valor, date):
@@ -232,11 +210,10 @@ def _converter_data(valor, campo: str = "data") -> date:
             return date.fromisoformat(valor)
         except ValueError:
             pass
-    raise DadosInvalidosError(f"O campo '{campo}' deve ser uma data (AAAA-MM-DD).")
+    raise DadosInvalidosError(f"O campo '{campo}' deve ser uma data Ano-Mes-Dia.")
 
 
 def _converter_enum(tipo_enum, valor, campo: str):
-    """Aceita o membro do enum ou seu nome em texto (ex.: 'laudes')."""
     if isinstance(valor, tipo_enum):
         return valor
     if isinstance(valor, str):
@@ -245,11 +222,10 @@ def _converter_enum(tipo_enum, valor, campo: str):
         except KeyError:
             pass
     opcoes = ", ".join(m.name for m in tipo_enum)
-    raise DadosInvalidosError(f"Valor inválido para '{campo}'. Opções: {opcoes}.")
+    raise DadosInvalidosError(f"Valor inválido para '{campo}', opcões: {opcoes}.")
 
 
 def _buscar_oracoes(session, ids) -> list:
-    """Orações pelos ids, rejeitando ids inexistentes."""
     ids = list(dict.fromkeys(ids or []))
     if not ids:
         return []
@@ -263,7 +239,6 @@ def _buscar_oracoes(session, ids) -> list:
 
 
 def _resolver_momentos(session, itens) -> list:
-    """Converte ids, nomes, ``BlocoMomento`` ou ``MomentoDia`` em ``MomentoDia``."""
     resultado = []
     with session.no_autoflush:
         for item in itens or []:
@@ -277,16 +252,15 @@ def _resolver_momentos(session, itens) -> list:
             else:
                 momento = None
             if momento is None:
-                raise DadosInvalidosError(f"Momento do dia inválido ou não cadastrado: {item!r}")
+                raise DadosInvalidosError(f"Momento do dia não cadastrado: {item!r}")
             if momento not in resultado:
                 resultado.append(momento)
     return resultado
 
 
 def _exigir_autenticacao(token) -> None:
-    """Bloqueia operações administrativas sem token válido (RNF05)."""
     if not Administrador._validar_token(token):
-        raise AutenticacaoError("Token inválido ou expirado.")
+        raise AutenticacaoError("Token expirado.")
 
 
 def _hash_senha(senha: str, salt: str | None = None) -> str:
@@ -305,9 +279,6 @@ def _verificar_senha(senha: str, armazenado: str) -> bool:
     return hmac.compare_digest(digest.hex(), esperado)
 
 
-# --------------------------------------------------------------------------- #
-# Tabelas associativas (N..N)
-# --------------------------------------------------------------------------- #
 Oracao_Momento_Dia = Table(
     "Oracao_Momento_Dia",
     Base.metadata,
@@ -327,17 +298,15 @@ Oracao_Dia_Novena = Table(
 )
 
 
-# --------------------------------------------------------------------------- #
-# Administrador (existe no banco; não é classe da UML - ator Administrador)
-# --------------------------------------------------------------------------- #
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ #
+# Administrador
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ #
 class Administrador(Base):
     __tablename__ = "Administradores"
 
     id = Column("id_administrador", Integer, primary_key=True)
     nome = Column("nome_administrador", String, nullable=False)
-    # Identificador de autenticação do MVP (ex.: "adm"). Único.
     login = Column("login_administrador", String, nullable=False, unique=True)
-    # E-mail é opcional; quando preenchido, também pode ser usado para entrar.
     email = Column("email_administrador", String, unique=True)
     senha_hash = Column("senha_hash_administrador", String, nullable=False)
 
@@ -345,12 +314,6 @@ class Administrador(Base):
         self.senha_hash = _hash_senha(senha)
 
     def emitir_token(self) -> str:
-        """Emite um token assinado (HMAC-SHA256) para este administrador.
-
-        Não verifica senha: use ``autenticar`` para fluxos de login. Existe
-        para processos internos confiáveis (ex.: seeds) que precisam chamar os
-        métodos protegidos sem contornar a validação do token.
-        """
         payload = {"sub": self.id, "exp": int(time.time()) + TOKEN_VALIDADE_SEGUNDOS}
         corpo = base64.urlsafe_b64encode(json.dumps(payload).encode()).decode()
         assinatura = hmac.new(SECRET_KEY.encode(), corpo.encode(), hashlib.sha256).hexdigest()
@@ -358,11 +321,6 @@ class Administrador(Base):
 
     @classmethod
     def autenticar(cls, session, login: str, senha: str) -> str:
-        """Valida credenciais e devolve um token assinado.
-
-        ``login`` é o identificador principal; por compatibilidade, se nenhum
-        administrador tiver esse login, tenta casar com o e-mail.
-        """
         admin = None
         if login:
             login = login.strip()
@@ -388,21 +346,18 @@ class Administrador(Base):
             return False
 
 
-# --------------------------------------------------------------------------- #
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ #
 # Santo
-# --------------------------------------------------------------------------- #
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ #
 class Santo(Base):
     __tablename__ = "Santos"
 
     id = Column("id_santo", Integer, primary_key=True)
     nome = Column("nome_santo", String, nullable=False, unique=True)
-    # Nome sem acento/minúsculo, usado por buscar_nome(). Preenchido automaticamente.
     nome_busca = Column("nome_busca_santo", String, index=True)
     foto_url = Column("foto_url_santo", String)
     biografia = Column("biografia_santo", Text)
 
-    # Associações simples e opcionais (UML 0..1 — 0..*), não composições: ao
-    # excluir um santo, os conteúdos permanecem e perdem o vínculo (SET NULL).
     oracoes = relationship("Oracao", back_populates="santo", passive_deletes=True,
                            order_by="Oracao.titulo")
     novenas = relationship("Novena", back_populates="santo", passive_deletes=True,
@@ -415,7 +370,6 @@ class Santo(Base):
         self.nome_busca = _normalizar(valor) if valor else None
         return valor
 
-    # -- leitura (rotas públicas, RNF06) --
     @classmethod
     def listar_todos(cls, session, pagina: int = 1, limite: int = LIMITE_MAXIMO_POR_PAGINA):
         return list(session.scalars(_paginar(select(cls).order_by(cls.nome), pagina, limite)))
@@ -438,7 +392,6 @@ class Santo(Base):
     def ver_livro_santo(self):
         return list(self.livros)
 
-    # -- escrita (protegida, RNF05; interface na Fase 2) --
     @classmethod
     def cadastrar(cls, session, dados: dict, token: str):
         _exigir_autenticacao(token)
@@ -450,7 +403,6 @@ class Santo(Base):
 
     @classmethod
     def atualizar(cls, session, id_santo: int, dados: dict, token: str):
-        """Atualiza nome, foto_url e/ou biografia (só os campos informados)."""
         _exigir_autenticacao(token)
         _validar_alteracoes(dados, {"nome", "foto_url", "biografia"}, obrigatorios=("nome",))
         santo = _buscar_ou_erro(session, cls, id_santo, "Santo")
@@ -461,15 +413,14 @@ class Santo(Base):
 
     @classmethod
     def excluir(cls, session, id_santo: int, token: str) -> None:
-        """Exclui o santo. Orações, novenas e livros dele ficam sem santo (SET NULL)."""
         _exigir_autenticacao(token)
         santo = _buscar_ou_erro(session, cls, id_santo, "Santo")
         _remover(session, santo, f"o santo '{santo.nome}'")
 
 
-# --------------------------------------------------------------------------- #
-# Momento do dia (persistência do enum MomentoDoDia)
-# --------------------------------------------------------------------------- #
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ #
+# Momento do dia
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ #
 class MomentoDia(Base):
     __tablename__ = "Momentos_Dia"
 
@@ -484,14 +435,12 @@ class MomentoDia(Base):
         return list(session.scalars(select(cls).order_by(cls.id)))
 
 
-# --------------------------------------------------------------------------- #
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ #
 # Oração
-# --------------------------------------------------------------------------- #
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ #
 class Oracao(Base):
     __tablename__ = "Oracoes"
     __table_args__ = (
-        # Unicidade de título: oração geral (sem santo) e oração de santo são
-        # regras separadas, pois NULL não conta como igual em UNIQUE comum.
         Index("uq_oracao_titulo_geral", "titulo_oracao", unique=True,
               sqlite_where=text("id_santo IS NULL"),
               postgresql_where=text("id_santo IS NULL")),
@@ -504,17 +453,15 @@ class Oracao(Base):
     titulo = Column("titulo_oracao", String, nullable=False)
     texto = Column("texto_oracao", Text, nullable=False)
     basica = Column("basica_oracao", Boolean, nullable=False, default=False)
-    # Nulo para orações gerais (ex.: Pai Nosso), que não pertencem a um santo.
     santo_id = Column("id_santo", Integer, ForeignKey("Santos.id_santo", ondelete="SET NULL"))
 
     santo = relationship("Santo", back_populates="oracoes")
-    # Atributo ``momentos: List<MomentoDoDia>`` da UML.
     momentos = relationship("MomentoDia", secondary=Oracao_Momento_Dia, back_populates="oracoes",
                             passive_deletes=True)
     dias_novena = relationship("DiaNovena", secondary=Oracao_Dia_Novena, back_populates="oracoes",
                                passive_deletes=True)
 
-    # -- leitura --
+    # leitura
     @classmethod
     def listar_todas(cls, session, pagina: int = 1, limite: int = LIMITE_MAXIMO_POR_PAGINA):
         return list(session.scalars(_paginar(select(cls).order_by(cls.titulo), pagina, limite)))
@@ -527,11 +474,6 @@ class Oracao(Base):
     @classmethod
     def filtrar_momento(cls, session, momento, pagina: int = 1,
                         limite: int = LIMITE_MAXIMO_POR_PAGINA):
-        """Orações de um momento do dia.
-
-        ``momento`` pode ser o enum ``BlocoMomento`` (como na UML), o nome em texto
-        (ex.: 'ao_acordar'), um ``MomentoDia`` ou o id do momento (usado pela API).
-        """
         consulta = select(cls).join(cls.momentos)
         if isinstance(momento, MomentoDia):
             consulta = consulta.where(MomentoDia.id == momento.id)
@@ -562,7 +504,6 @@ class Oracao(Base):
 
     @classmethod
     def atualizar(cls, session, id_oracao: int, dados: dict, token: str):
-        """Atualiza titulo, texto, basica, santo_id e/ou momentos_ids."""
         _exigir_autenticacao(token)
         _validar_alteracoes(dados, {"titulo", "texto", "basica", "santo_id", "momentos_ids"},
                             obrigatorios=("titulo", "texto"))
@@ -583,17 +524,11 @@ class Oracao(Base):
 
     @classmethod
     def excluir(cls, session, id_oracao: int, token: str) -> None:
-        """Exclui a oração; ela sai dos momentos do dia e dos dias de novena."""
         _exigir_autenticacao(token)
         oracao = _buscar_ou_erro(session, cls, id_oracao, "Oração")
         _remover(session, oracao, f"a oração '{oracao.titulo}'")
 
     def categorizar(self, momentos, token: str) -> None:
-        """Define (substitui) os momentos do dia em que a oração é indicada (US20).
-
-        Aceita ``MomentoDia`` ou, se a oração já estiver em uma sessão, também
-        ``BlocoMomento``, nomes em texto ou ids.
-        """
         _exigir_autenticacao(token)
         itens = list(momentos or [])
         if all(isinstance(m, MomentoDia) for m in itens):
@@ -602,14 +537,12 @@ class Oracao(Base):
             self.momentos = _resolver_momentos(_sessao_de(self), itens)
 
 
-# --------------------------------------------------------------------------- #
-# Novena e DiaNovena (composição 1 — 9)
-# --------------------------------------------------------------------------- #
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ #
+# Novena e DiaNovena
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ #
 class Novena(Base):
     __tablename__ = "Novenas"
     __table_args__ = (
-        # Santo é opcional (UML 0..1): título único entre as novenas sem santo e
-        # par (santo, título) único entre as novenas de um santo.
         Index("uq_novena_titulo_geral", "titulo_novena", unique=True,
               sqlite_where=text("id_santo IS NULL"),
               postgresql_where=text("id_santo IS NULL")),
@@ -646,22 +579,16 @@ class Novena(Base):
 
     @classmethod
     def cadastrar(cls, session, dados: dict, token: str):
-        """Cadastra a novena com seus 9 dias (US21).
-
-        ``dados["dias"]`` deve conter exatamente 9 itens, cada um no formato
-        ``{"texto_reflexao": str, "oracoes_base_ids": [int, ...]}``.
-        ``dados["santo_id"]`` é opcional (UML 0..1).
-        """
         _exigir_autenticacao(token)
         _exigir_campos(dados, "titulo")
         dias = dados.get("dias") or []
         if len(dias) != DIAS_DA_NOVENA:
-            raise DadosInvalidosError(f"Uma novena precisa ter exatamente {DIAS_DA_NOVENA} dias.")
+            raise DadosInvalidosError(f"Uma novena precisa ter {DIAS_DA_NOVENA} dias, conserta!")
         santo_id = dados.get("santo_id")
         _validar_santo(session, santo_id)
 
         novena = cls(titulo=dados["titulo"], descricao=dados.get("descricao"), santo_id=santo_id)
-        with session.no_autoflush:  # a novena ainda está sendo montada fora da sessão
+        with session.no_autoflush:
             for numero, dia in enumerate(dias, start=1):
                 _exigir_campos(dia, "texto_reflexao")
                 item = DiaNovena(numero_dia=numero, texto_reflexao=dia["texto_reflexao"])

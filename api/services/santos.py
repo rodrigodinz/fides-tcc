@@ -14,7 +14,7 @@ def listar(session: Session, params: ParamsPaginacao, q: str | None) -> Pagina[S
     consulta = select(Santo)
     if q is not None and q.strip():
         termo = normalizar_busca(q)
-        if not termo:  # ex.: só ideogramas/símbolos: nada a casar (evita LIKE '%%')
+        if not termo: 
             return pagina_vazia(params)
         consulta = consulta.where(Santo.nome_busca.like(f"%{escapar_like(termo)}%", escape="\\"))
     consulta = consulta.order_by(Santo.nome, Santo.id)
@@ -25,7 +25,6 @@ def detalhar(session: Session, santo_id: int) -> SantoDetalhe:
     santo = Santo.buscar_id(session, santo_id)  # método do modelo
     if santo is None:
         raise nao_encontrado("Santo")
-    # Os relacionamentos do ORM só trazem registros com id_santo == santo.id.
     return SantoDetalhe(
         id=santo.id, nome=santo.nome, foto_url=santo.foto_url, biografia=santo.biografia,
         oracoes=[OracaoDoSanto(id=o.id, titulo=o.titulo, basica=o.basica) for o in santo.ver_oracao_santo()],
