@@ -41,7 +41,7 @@ class OracaoBaseDoDia(BaseModel):
     texto: str
 
 
-# conteúdo de um dia + números do dia anterior e do próximo, para a navegação
+# conteúdo de um dia e números do dia anterior e do próximo
 class DetalhesDoDiaDaNovena(BaseModel):
     novena: ReferenciaDaNovena
     numero_do_dia: int

@@ -31,7 +31,7 @@ from sqlalchemy.orm import object_session, relationship, validates
 from .connection import Base
 
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ #
-# Constantes de negócio (RNFs)
+# Constantes do negócio (RNFs)
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ #
 Limite_Maximo_Por_Pagina = 20
 Periodo_Disponivel_De_Liturgias = 7
@@ -97,13 +97,13 @@ class StatusAgenda(enum.Enum):
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ #
 # Normalizações do Código
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ #
-# tira acentos e deixa minúsculo, para a busca por nome ignorar acentuação
+# tira acentos e deixa minúsculo, pra busca por nome ignorar acentuação
 def _normalizar(texto: str) -> str:
     sem_acento = unicodedata.normalize("NFKD", texto).encode("ascii", "ignore").decode()
     return sem_acento.lower().strip()
 
 
-# aplica LIMIT/OFFSET na consulta, respeitando o máximo de 20 itens por página (RNF02)
+# aplica limit/offset na consulta, respeitando o máximo de 20 itens por página
 def _paginar(consulta, pagina: int = 1, limite: int = Limite_Maximo_Por_Pagina):
     pagina = max(int(pagina), 1)
     limite = min(max(int(limite), 1), Limite_Maximo_Por_Pagina)
@@ -157,7 +157,7 @@ def _remover(session, objeto, descricao: str) -> None:
         raise
 
 
-# recupera a sessão do SQLAlchemy à qual o objeto está ligado
+# recupera a sessão do SQLAlchemy onde o objeto tá ligado
 def _sessao_de(objeto):
     session = object_session(objeto)
     if session is None:
@@ -193,7 +193,7 @@ def _converter_data(valor, campo: str = "data") -> date:
     raise Erro_De_Dados_Incorretos(f"O campo '{campo}' deve ser uma data Ano-Mes-Dia.")
 
 
-# converte texto (ex.: 'laudes') no membro do enum correspondente
+# converte texto no enum correspondente
 def _converter_enum(tipo_enum, valor, campo: str):
     if isinstance(valor, tipo_enum):
         return valor
@@ -206,7 +206,7 @@ def _converter_enum(tipo_enum, valor, campo: str):
     raise Erro_De_Dados_Incorretos(f"Valor inválido para '{campo}'. Opções: {opcoes}.")
 
 
-# carrega as orações pelos ids, mantendo a ordem e acusando ids inexistentes
+# carrega as orações pelos ids, mantendo a ordem e acusando ids que não existem
 def _buscar_oracoes(session, ids) -> list:
     ids = list(dict.fromkeys(ids or []))
     if not ids:
@@ -241,7 +241,7 @@ def _resolver_momentos(session, itens) -> list:
     return resultado
 
 
-# toda operação de escrita passa por aqui: sem token válido, nada é alterado (RNF05)
+# toda operação de escresver do adm passa por aqui
 def _exigir_autenticacao(token) -> None:
     if not Administrador._validar_token(token):
         raise Erro_De_Autenticacao("Token expirado.")
@@ -255,7 +255,7 @@ def _hash_senha(senha: str, salt: str | None = None) -> str:
     return f"pbkdf2_sha256${iteracoes}${salt}${digest.hex()}"
 
 
-# compara a senha digitada com o hash salvo, em tempo constante
+# compara a senha digitada com o hash salvo
 def _verificar_senha(senha: str, armazenado: str) -> bool:
     try:
         _, iteracoes, salt, esperado = armazenado.split("$")
@@ -389,7 +389,7 @@ class Santo(Base):
     def ver_livro_santo(self):
         return list(self.livros)
 
-    # cadastra um santo novo (exige token de administrador)
+    # cadastra um santo novo (precisa ter o token do adm)
     @classmethod
     def cadastrar(cls, session, dados: dict, token: str):
         _exigir_autenticacao(token)
@@ -399,7 +399,7 @@ class Santo(Base):
         _persistir(session, santo, f"um santo chamado '{dados['nome']}'")
         return santo
 
-    # altera nome, foto ou biografia de um santo
+    # muda o nome, foto ou biografia de um santo
     @classmethod
     def atualizar(cls, session, id_santo: int, dados: dict, token: str):
         _exigir_autenticacao(token)
@@ -410,7 +410,7 @@ class Santo(Base):
         _persistir(session, santo, f"um santo chamado '{santo.nome}'")
         return santo
 
-    # exclui o santo; orações, novenas e livros ficam sem santo (SET NULL)
+    # exclui o santo; orações, novenas e livros ficam sem santo com set null
     @classmethod
     def excluir(cls, session, id_santo: int, token: str) -> None:
         _exigir_autenticacao(token)
@@ -430,7 +430,7 @@ class MomentoDia(Base):
     oracoes = relationship("Oracao", secondary=Oracao_Momento_Dia, back_populates="momentos",
                            passive_deletes=True)
 
-    # lista os momentos do dia cadastrados (ao acordar, antes de dormir...)
+    # lista os momentos do dia (ao acordar, antes de dormir, essas coisas)
     @classmethod
     def listar_momentos_do_dia(cls, session):
         return list(session.scalars(select(cls).order_by(cls.id)))
@@ -462,12 +462,12 @@ class Oracao(Base):
     dias_novena = relationship("Conteudo_Dia_Novena", secondary=Oracao_Dia_Novena, back_populates="oracoes",
                                passive_deletes=True)
 
-    # lista todas as orações em ordem alfabética, paginado
+    # lista todas as orações em ordem alfabética
     @classmethod
     def listar_todas_as_oracoes(cls, session, pagina: int = 1, limite: int = Limite_Maximo_Por_Pagina):
         return list(session.scalars(_paginar(select(cls).order_by(cls.titulo), pagina, limite)))
 
-    # lista só as orações básicas (Pai Nosso, Ave Maria...)
+    # lista só as orações básicas (Pai Nosso, Ave Maria, etc)
     @classmethod
     def listar_oracoes_basicas(cls, session, pagina: int = 1, limite: int = Limite_Maximo_Por_Pagina):
         consulta = select(cls).where(cls.basica.is_(True)).order_by(cls.id)
@@ -569,7 +569,7 @@ class Novena(Base):
     agendas = relationship("Agenda", back_populates="novena", passive_deletes=True,
                            order_by="Agenda.data_inicio")
 
-    # lista as novenas em ordem alfabética, paginado
+    # lista as novenas em ordem alfabética
     @classmethod
     def listar_todas_novenas(cls, session, pagina: int = 1, limite: int = Limite_Maximo_Por_Pagina):
         return list(session.scalars(_paginar(select(cls).order_by(cls.titulo), pagina, limite)))
@@ -584,11 +584,11 @@ class Novena(Base):
     def buscar_por_santo(cls, session, santo_id: int):
         return list(session.scalars(select(cls).where(cls.santo_id == santo_id).order_by(cls.titulo)))
 
-    # os 9 dias da novena, já em ordem
+    # os 9 dias da novena
     def ver_dias_da_novena(self):
         return list(self.dias)
 
-    # cadastra a novena junto com os seus 9 dias (composição: os dias nascem com ela)
+    # cadastra a novena junto com os 9 dias dela
     @classmethod
     def cadastrar(cls, session, dados: dict, token: str):
         _exigir_autenticacao(token)
@@ -610,7 +610,7 @@ class Novena(Base):
         _persistir(session, novena, f"uma novena '{dados['titulo']}' {escopo}")
         return novena
 
-    # altera título, descrição ou santo da novena
+    # muda título, descrição ou santo da novena
     @classmethod
     def atualizar(cls, session, id_novena: int, dados: dict, token: str):
         _exigir_autenticacao(token)
@@ -624,7 +624,7 @@ class Novena(Base):
         _persistir(session, novena, f"uma novena '{novena.titulo}' {escopo}")
         return novena
 
-    # exclui a novena (e os dias); bloqueia se ainda houver agenda ativa
+    # exclui a novena e os dias dela (bloqueia se ainda tiver agenda ativa)
     @classmethod
     def excluir(cls, session, id_novena: int, token: str) -> None:
         _exigir_autenticacao(token)
@@ -664,7 +664,7 @@ class Conteudo_Dia_Novena(Base):
         return list(session.scalars(
             select(cls).where(cls.novena_id == novena_id).order_by(cls.numero_do_dia)))
 
-    # orações rezadas naquele dia
+    # orações rezadas no dia da novena
     def ver_oracoes_base(self):
         return list(self.oracoes)
 
@@ -700,18 +700,18 @@ class Livro(Base):
 
     santo = relationship("Santo", back_populates="livros")
 
-    # lista os livros em ordem alfabética, paginado
+    # lista os livros em ordem alfabética
     @classmethod
     def listar_todos_livros(cls, session, pagina: int = 1, limite: int = Limite_Maximo_Por_Pagina):
         return list(session.scalars(_paginar(select(cls).order_by(cls.titulo), pagina, limite)))
 
-    # livros marcados como recomendados no cadastro
+    # livros marcados como recomendados
     @classmethod
     def listar_livros_recomendados(cls, session, pagina: int = 1, limite: int = Limite_Maximo_Por_Pagina):
         consulta = select(cls).where(cls.livro_recomendado.is_(True)).order_by(cls.titulo)
         return list(session.scalars(_paginar(consulta, pagina, limite)))
 
-    # devolve o livro pelo id (ou None)
+    # devolve o livro pelo id
     @classmethod
     def buscar_por_id(cls, session, id_livro: int):
         return session.get(cls, id_livro)
@@ -735,7 +735,7 @@ class Livro(Base):
         _persistir(session, livro, f"o livro '{dados['titulo']}' de {dados['autor']}")
         return livro
 
-    # altera os dados do livro
+    # altera os dados de um livro
     @classmethod
     def atualizar(cls, session, id_livro: int, dados: dict, token: str):
         _exigir_autenticacao(token)
@@ -750,7 +750,7 @@ class Livro(Base):
         _persistir(session, livro, f"o livro '{livro.titulo}' de {livro.autor}")
         return livro
 
-    # exclui o livro
+    # exclui um livro
     @classmethod
     def excluir(cls, session, id_livro: int, token: str) -> None:
         _exigir_autenticacao(token)
@@ -785,7 +785,7 @@ class Agenda(Base):
     liturgias_hora = relationship("LiturgiaHora", back_populates="agenda",
                                   order_by="LiturgiaHora.data")
 
-    # True se a data está entre hoje-7 e hoje+7 (RNF07)
+    # True se a data está entre hoje-7 e hoje+7
     @staticmethod
     def liturgia_dentro_do_intervalo(data: date, hoje: date | None = None) -> bool:
         hoje = hoje or date.today()
@@ -797,7 +797,7 @@ class Agenda(Base):
         if not cls.liturgia_dentro_do_intervalo(data):
             raise Erro_Da_Liturgia_Fora_Da_Data_Permitida()
 
-    # agenda a novena por 9 dias a partir da data; só pode haver uma agenda ativa
+    # agenda a novena por 9 dias a partir da data (só pode ter uma agenda ativa)
     @classmethod
     def agendar_novena(cls, session, novena_id: int, data_inicio, token: str):
         _exigir_autenticacao(token)
@@ -861,7 +861,7 @@ class Agenda(Base):
                               cls.data_fim >= hoje)
             .order_by(cls.data_inicio, cls.id))
 
-    # dia da novena hoje (1 a 9); 0 se ainda não começou ou já acabou
+    # dia da novena hoje (1 a 9) (Coloca 0 se ainda não começou ou já acabou)
     def calcular_dia_atual(self, hoje: date | None = None) -> int:
         if self.tipo != TipoAgenda.NOVENA:
             raise Erro_De_Dados_Incorretos("Só agendas de novena têm dia atual.")
@@ -871,7 +871,7 @@ class Agenda(Base):
         dia = (hoje - self.data_inicio).days + 1
         return dia if 1 <= dia <= Dias_Da_Novena else 0
 
-    # agendas ativas de um tipo (NOVENA ou LITURGIA) que ainda não terminaram
+    # agendas ativas de um tipo (novena ou liturgia) que ainda não terminaram
     @classmethod
     def listar_agendas_ativas(cls, session, tipo, hoje: date | None = None):
         tipo = _converter_enum(TipoAgenda, tipo, "tipo")
@@ -885,7 +885,7 @@ class Agenda(Base):
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ #
 # Liturgia: LiturgiaDia e LiturgiaHora
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ #
-# a liturgia só pode ser cadastrada numa agenda de liturgia ativa que cubra a data
+# a liturgia só pode ser cadastrada numa agenda de liturgia ativa que esteja dentro da data
 def _validar_agenda_liturgia(session, agenda_id, data: date) -> None:
     agenda = session.get(Agenda, agenda_id) if agenda_id is not None else None
     if agenda is None:
@@ -923,7 +923,7 @@ class LiturgiaDia(Base):
 
     Campos_Texto = ("santo_celebrado", "primeira_leitura", "salmo", "evangelho", "segunda_leitura")
 
-    # Liturgia do Dia de uma data (valida a janela de ±7 dias antes)
+    # Liturgia do Dia de uma data
     @classmethod
     def buscar_por_data(cls, session, data: date):
         Agenda.validar_intervalo_da_liturgia(data)
@@ -987,7 +987,7 @@ class LiturgiaHora(Base):
 
     agenda = relationship("Agenda", back_populates="liturgias_hora")
 
-    # todos os blocos (laudes, horas médias, vésperas) de uma data
+    # organiza todos os blocos (laudes, horas médias, vésperas) de uma data
     @classmethod
     def buscar_por_data(cls, session, data: date):
         Agenda.validar_intervalo_da_liturgia(data)

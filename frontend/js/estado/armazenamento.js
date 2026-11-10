@@ -1,6 +1,6 @@
 export const Prefixo_Das_Chaves = "fides:v1:";
 
-// localStorage pode estar bloqueado (aba anônima, cota cheia); esta verificação evita que o site quebre
+// localStorage pode estar bloqueado (aba anônima, cota cheia), então essa função evita que o site quebre
 function obterArmazenamentoLocal() {
   try {
     const armazenamentoLocal = globalThis.localStorage;
@@ -18,7 +18,7 @@ export function armazenamentoDisponivel() {
   return obterArmazenamentoLocal() !== null;
 }
 
-// lê do localStorage; se o dado estiver corrompido devolve o valor padrão
+// lê do localStorage (se o dado estiver corrompido devolve o valor padrão)
 export function lerJsonDoDispositivo(chave, valorPadrao, validarValor = () => true) {
   const armazenamentoLocal = obterArmazenamentoLocal();
   if (!armazenamentoLocal) return valorPadrao;

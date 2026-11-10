@@ -2,7 +2,6 @@ from typing import Generic, TypeVar
 
 from pydantic import BaseModel, Field
 
-# Schemas (Pydantic) definem o formato do JSON que a API devolve e validam os tipos
 TipoDoItem = TypeVar("TipoDoItem")
 
 

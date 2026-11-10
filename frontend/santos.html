@@ -7,17 +7,14 @@
   <meta name="theme-color" content="#EEE8DC">
   <link rel="icon" type="image/svg+xml" href="/imagens/simbolo-fides.svg">
   <title>Santos · Fides</title>
-  <!-- estilos: fontes, cores e medidas (tokens), base, componentes e páginas -->
   <link rel="stylesheet" href="/css/fontes.css">
   <link rel="stylesheet" href="/css/tokens.css">
   <link rel="stylesheet" href="/css/base.css">
   <link rel="stylesheet" href="/css/componentes.css">
   <link rel="stylesheet" href="/css/paginas.css">
-  <!-- type="module": o script pode usar import/export e só roda depois que o HTML terminou de carregar -->
   <script type="module" src="/js/paginas/santos.js"></script>
 </head>
-<!-- Lista e busca de santos (santos.html?nome=...&pagina=...) -->
-<!-- data-modulo diz qual link do menu fica marcado como página atual -->
+<!-- LISTA DE TODOS OS SANTOS E BUSCA POR ID, NOME, ETC (santos.html?nome=...&pagina=...) -->
 <body data-modulo="santos">
   <div class="estrutura-do-site">
     <a href="#conteudo" class="link-pular-para-o-conteudo">Pular para o conteúdo</a>
@@ -38,7 +35,7 @@
             <span id="busca-santo-ajuda" class="texto-auxiliar">Acentos e maiúsculas não fazem diferença.</span>
           </div>
         </div>
-        <!-- resultados da busca: preenchido pelo santos.js -->
+        <!-- resultados da busca que é preenchido pelo santos.js -->
         <section class="secao" aria-label="Resultados" id="resultados"></section>
       </div>
     </main>

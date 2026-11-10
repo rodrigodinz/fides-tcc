@@ -10,10 +10,8 @@ from ..errors import Respostas_De_Erro
 from ..schemas.agenda import ConteudosDoDia
 from ..services import agenda_dia as servico
 
-# APIRouter agrupa as rotas deste módulo: prefix entra antes de cada caminho, tags agrupa no /docs
-# e responses documenta os erros padrão (400, 404, 422...) no OpenAPI
 router = APIRouter(prefix="/agenda", tags=["Agenda"], responses=Respostas_De_Erro)
-# Depends(get_session): o FastAPI abre uma sessão do banco por requisição e fecha no final
+# Depends(get_session) (o FastAPI abre uma sessão do banco por requisição e fecha no final)
 Sessao = Annotated[Session, Depends(get_session)]
 
 

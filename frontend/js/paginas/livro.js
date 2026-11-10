@@ -1,4 +1,4 @@
-// Detalhe do livro: autor, santo, resumo e contexto histórico.
+// Detalhe do livro (autor, santo, resumo e contexto histórico)
 import { montarLayout, definirTitulo } from "../layout.js";
 import { servicoLivros } from "../api/servicos.js";
 import { ehErroDeNaoEncontrado } from "../api/erros.js";

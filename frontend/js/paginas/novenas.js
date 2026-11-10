@@ -1,4 +1,4 @@
-// Catálogo de novenas com filtro por santo; cada card mostra a situação da agenda.
+// Catálogo de novenas com filtro por santo (onde cada card mostra a situação da agenda)
 import { montarLayout } from "../layout.js";
 import { servicoNovenas, servicoSantos, listarTodasAsPaginas } from "../api/servicos.js";
 import { criarConsulta, paginaEstaVazia } from "../utils/consulta.js";
@@ -13,7 +13,7 @@ montarLayout();
 const areaDoFiltro = document.getElementById("filtro-por-santo");
 const areaDasNovenas = document.getElementById("lista-de-novenas");
 const consultarNovenas = criarConsulta();
-let opcoesDeSanto = null;  // enquanto for null, o filtro fica desabilitado
+let opcoesDeSanto = null;  // enquanto for null, o filtro fica inativo
 
 // o filtro guarda o santo na URL (?santo=2) e volta para a página 1
 function filtrarPorSanto(santoId) {

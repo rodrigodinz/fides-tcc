@@ -7,21 +7,17 @@
   <meta name="theme-color" content="#EEE8DC">
   <link rel="icon" type="image/svg+xml" href="/imagens/simbolo-fides.svg">
   <title>Página não encontrada · Fides</title>
-  <!-- estilos: fontes, cores e medidas (tokens), base, componentes e páginas -->
   <link rel="stylesheet" href="/css/fontes.css">
   <link rel="stylesheet" href="/css/tokens.css">
   <link rel="stylesheet" href="/css/base.css">
   <link rel="stylesheet" href="/css/componentes.css">
   <link rel="stylesheet" href="/css/paginas.css">
-  <!-- type="module": o script pode usar import/export e só roda depois que o HTML terminou de carregar -->
+  <!-- type="module" > o script pode usar import/export e só roda depois que o HTML terminou de carregar -->
   <script type="module" src="/js/paginas/nao-encontrada.js"></script>
 </head>
-<!-- Mostrada pelo servidor para qualquer endereço que não existe -->
-<!-- data-modulo diz qual link do menu fica marcado como página atual -->
 <body data-modulo="">
   <div class="estrutura-do-site">
     <a href="#conteudo" class="link-pular-para-o-conteudo">Pular para o conteúdo</a>
-    <!-- a navbar e o menu lateral entram aqui (layout.js) -->
     <main id="conteudo" tabindex="-1" class="conteudo-principal">
       <div class="trilho-ornamental trilho-ornamental-da-esquerda" aria-hidden="true"></div>
       <div class="trilho-ornamental trilho-ornamental-da-direita" aria-hidden="true"></div>
@@ -34,7 +30,6 @@
         </div>
       </div>
     </main>
-    <!-- o rodapé entra aqui (layout.js) -->
   </div>
   <noscript>O Fides precisa de JavaScript habilitado para funcionar.</noscript>
 </body>

@@ -1,9 +1,9 @@
-// A API e as páginas são servidas pelo mesmo uvicorn, então os endereços são relativos (sem http://...)
+// A API e as páginas são servidas pelo mesmo uvicorn
 export const Prefixo_Da_Api = "/api/v1";
 export const Limite_Maximo_Por_Pagina = 20;
 export const Tempo_Limite_Em_Milissegundos = 12000;
 
-// erro padronizado do front: guarda o código que a API mandou (ex.: RECURSO_NAO_ENCONTRADO)
+// erro padronizado do front (guarda o código que a API mandou)
 export class ErroDaApi extends Error {
   constructor({ codigo, mensagem, status = 0, detalhes = [] }) {
     super(mensagem || codigo);
@@ -44,7 +44,7 @@ async function lerErroDaResposta(resposta) {
   return new ErroDaApi({ codigo, mensagem: "Resposta inesperada do servidor.", status: resposta.status });
 }
 
-// Única função que faz fetch na API. Ela:
+// Única função que faz fetch na API
 // - cancela a requisição se demorar mais que 12 s;
 // - transforma falha de rede, tempo esgotado e erros HTTP em ErroDaApi;
 // - devolve o JSON quando dá certo.

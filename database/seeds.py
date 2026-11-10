@@ -2,17 +2,10 @@
 
 Uso (a partir da raiz do repositório):
 
-    python -m database.seeds                          # cria tabelas (se faltarem) e popula
-    python -m database.seeds --redefinir-senha-admin  # idem, e regrava a senha do admin
+    python -m database.seeds                                # cria tabelas (se faltarem) e popula
+    python -m database.seeds --redefinir-senha-admin        # idem, e regrava a senha do admin
     python -m database.seeds --data-referencia 2026-11-20   # agendas/liturgia em torno dessa data
-    python -m database.seeds --reset                  # DESTRUTIVO: apaga TODAS as tabelas e dados
-
-Variáveis de ambiente (opcionais):
-    FIDES_ADMIN_LOGIN     login do administrador (padrão de desenvolvimento: "adm")
-    FIDES_ADMIN_SENHA     senha do administrador (nome principal)
-    FIDES_ADMIN_PASSWORD  alias de compatibilidade; só vale se FIDES_ADMIN_SENHA
-                          não estiver definida
-    FIDES_ADMIN_EMAIL     e-mail opcional do administrador (também aceito no login)
+    python -m database.seeds --reset                        # DESTRUTIVO: apaga TODAS as tabelas e dados
 """
 import argparse
 import os

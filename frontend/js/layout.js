@@ -1,11 +1,11 @@
-// Moldura comum a todas as páginas: navbar, menu lateral, rodapé, avisos rápidos (toast)
-// e janela de confirmação. Cada página HTML chama montarLayout() logo no começo do seu script.
+// Estrutura comum detodas as páginas (navbar, menu lateral, rodapé, avisos rápidos e janela de confirmação. 
+// Cada página HTML chama montarLayout() logo no começo do seu script.
 import { icone } from "./componentes/icones.js";
 import { ornamento, retratoIndisponivel } from "./componentes/componentes.js";
 import { criarElemento, escaparHtml } from "./componentes/html.js";
 
 // Lista única dos módulos; a navbar, o menu lateral e o rodapé são montados a partir dela.
-// "chave" identifica o módulo; cada página informa a sua chave no <body data-modulo="...">.
+// "chave" identifica o módulo e cada página informa a sua chave.
 export const Modulos = [
   { chave: "inicio", endereco: "/", nome: "Início", icone: "inicio" },
   { chave: "santos", endereco: "/santos.html", nome: "Santos", icone: "santos", aparecerNaNavbar: true },
@@ -17,7 +17,7 @@ export const Modulos = [
   { chave: "agenda", endereco: "/agenda.html", nome: "Agenda do dia", icone: "hoje" },
 ];
 
-// aria-current="page" marca o link da página atual (o CSS usa isso para sublinhar o link)
+// aria-current="page" marca o link da página atual (o CSS usa isso para melhorar o link)
 const marcarLinkDaPaginaAtual = (modulo, moduloAtual) => (modulo.chave === moduloAtual ? ' aria-current="page"' : "");
 
 function montarNavbar(moduloAtual) {
@@ -51,7 +51,6 @@ function montarRodape() {
     + "<span>Liturgia em conteúdo de demonstração: não é o texto oficial.</span></div></footer>";
 }
 
-// ---------------------------------------------------------------- foco preso (acessibilidade)
 const Seletor_De_Elementos_Focaveis = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 // com Tab, o foco gira só dentro do menu ou da janela de confirmação aberta
@@ -71,7 +70,7 @@ function prenderFocoNoContainer(eventoDeTeclado, container) {
   }
 }
 
-// ---------------------------------------------------------------- menu lateral
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+- menu lateral +-+-+-+-+-+-+-+-+-+-+-+-+-+-
 function ligarMenuLateral(estadoDoLayout) {
   const botaoAbrir = document.querySelector('.navbar button[aria-controls="menu-lateral"]');
   const menu = document.getElementById("menu-lateral");
@@ -108,7 +107,7 @@ function ligarMenuLateral(estadoDoLayout) {
   veuAtrasDoMenu.addEventListener("click", fecharMenu);
 }
 
-// ---------------------------------------------------------------- navbar que some ao rolar
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+- navbar que some quando rola pra baixo (lá ele) +-+-+-+-+-+-+-+-+-+-+-+-+-+-
 export const Distancia_Minima_De_Rolagem = 24;
 export const Altura_Da_Zona_Do_Topo = 16;
 
@@ -139,16 +138,16 @@ function ligarNavbarQueSome(estadoDoLayout) {
     if (distanciaAcumulada > Distancia_Minima_De_Rolagem) definirEscondida(true);
     else if (distanciaAcumulada < -Distancia_Minima_De_Rolagem) definirEscondida(false);
   };
-  // requestAnimationFrame: atualiza no máximo uma vez por quadro, sem pesar a rolagem
+  // requestAnimationFrame (atualiza no máximo uma vez por frame)
   window.addEventListener("scroll", () => {
     if (!atualizacaoAgendada) { atualizacaoAgendada = true; requestAnimationFrame(atualizarNavbar); }
   }, { passive: true });
 }
 
-// ---------------------------------------------------------------- avisos rápidos (toast)
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+- avisos rápidos (toast) +-+-+-+-+-+-+-+-+-+-+-+-+-+-
 const Tempo_Do_Aviso_Na_Tela = 3200;
 
-// mostra um aviso no canto da tela que some sozinho; aria-live faz o leitor de tela ler o aviso
+// mostra um aviso no canto da tela que some sozinho
 export function avisar(texto) {
   const areaDosAvisos = document.querySelector(".area-dos-avisos-rapidos");
   const aviso = criarElemento(`<div class="aviso-rapido">${icone("check")}${escaparHtml(texto)}</div>`);
@@ -157,9 +156,8 @@ export function avisar(texto) {
   setTimeout(() => aviso.remove(), Tempo_Do_Aviso_Na_Tela);
 }
 
-// ---------------------------------------------------------------- janela de confirmação
-// Abre a janela de confirmação e devolve uma Promise: true se a pessoa confirmou, false se cancelou.
-// Esc cancela, clicar fora cancela e o foco fica preso dentro da janela enquanto ela está aberta.
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+- janela de confirmação +-+-+-+-+-+-+-+-+-+-+-+-+-+-
+// Abre a janela de confirmação e devolve uma Promise: true se a pessoa confirmou, false se cancelou
 export function pedirConfirmacao({ titulo, texto, textoConfirmar = "Confirmar", textoCancelar = "Cancelar" }) {
   return new Promise((resolver) => {
     const elementoFocadoAntes = document.activeElement;
@@ -189,14 +187,13 @@ export function pedirConfirmacao({ titulo, texto, textoConfirmar = "Confirmar", 
   });
 }
 
-// ---------------------------------------------------------------- utilidades da página
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+- utilidades da página +-+-+-+-+-+-+-+-+-+-+-+-+-+-
 // muda o título da aba do navegador
 export function definirTitulo(tituloDaPagina) {
   document.title = tituloDaPagina ? `${tituloDaPagina} · Fides` : "Fides";
 }
 
 // se a foto de um santo não carregar, troca pelo símbolo do Fides
-// (o "true" no fim escuta na fase de captura, porque o evento de erro de imagem não sobe pela página)
 function tratarImagemQuebrada(evento) {
   const imagem = evento.target;
   if (!(imagem instanceof HTMLImageElement) || !imagem.dataset.retratoDe) return;

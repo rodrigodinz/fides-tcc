@@ -13,7 +13,7 @@ import {
 
 montarLayout();
 
-// ---------------------------------------------------------------- seção "Hoje"
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+- seção Hoje +-+-+-+-+-+-+-+-+-+-+-+-+-+-
 function desenharNovenasDeHoje(conteudosDoDia) {
   if (conteudosDoDia.novenas_em_andamento.length === 0) {
     return card({
@@ -66,7 +66,7 @@ async function carregarSecaoHoje() {
     + `<div style="margin-top:24px">${alerta({ tipo: "aviso", titulo: "Liturgia de demonstração", papel: "note", corpo: `<p>${escaparHtml(conteudosDoDia.aviso)}</p>` })}</div>`;
 }
 
-// ---------------------------------------------------------------- seção "Santos"
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+- seção Santos +-+-+-+-+-+-+-+-+-+-+-+-+-+-
 async function carregarSecaoSantos() {
   const secao = document.getElementById("secao-santos");
   const tituloDaSecao = tituloDeSecao({
@@ -85,8 +85,7 @@ async function carregarSecaoSantos() {
   secao.innerHTML = tituloDaSecao + `<div class="grade grade-de-3-colunas">${resultado.dados.itens.map((santo) => cardDoSanto(santo)).join("")}</div>`;
 }
 
-// ---------------------------------------------------------------- seção "Para continuar a leitura"
-// só aparece se a pessoa já visitou algum santo neste aparelho e se houver livro recomendado
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+- seção "Para continuar a leitura" +-+-+-+-+-+-+-+-+-+-+-+-+-+-
 async function carregarSecaoRecomendados() {
   const secao = document.getElementById("secao-recomendados");
   const idsDosSantosAcessados = listarSantosAcessados();
@@ -107,7 +106,7 @@ async function carregarSecaoRecomendados() {
   })).join("")}</div>`;
 }
 
-// as três seções carregam ao mesmo tempo, cada uma na sua área
+// as três seções carregam ao mesmo tempo
 carregarSecaoHoje();
 carregarSecaoSantos();
 carregarSecaoRecomendados();

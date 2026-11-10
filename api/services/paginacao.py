@@ -30,7 +30,7 @@ def ler_parametros_de_paginacao(
 Paginacao = Annotated[ParametrosDePaginacao, Depends(ler_parametros_de_paginacao)]
 
 
-# a paginação é feita no SQL (COUNT + LIMIT/OFFSET), nunca carregando tudo na memória (RNF02)
+# a paginação é feita no SQL (COUNT + LIMIT/OFFSET), nunca carregando tudo na memória
 def paginar(session: Session, consulta: Select, parametros: ParametrosDePaginacao,
             converter_item: Callable, opcoes_de_carregamento: tuple = ()) -> Pagina:
     total_registros = session.scalar(

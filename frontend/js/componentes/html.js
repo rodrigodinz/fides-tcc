@@ -1,5 +1,4 @@
-// Todo texto que vem da API passa por aqui antes de entrar no HTML.
-// Isso impede que um texto com "<script>" vire código na página (proteção contra XSS).
+// Todo texto que vem da API passa por aqui antes de entrar no HTML
 export function escaparHtml(texto) {
   return String(texto ?? "")
     .replace(/&/g, "&amp;")
@@ -10,13 +9,12 @@ export function escaparHtml(texto) {
 }
 
 let contadorDeIds = 0;
-// gera um id único na página (ex.: para ligar um <label> ao seu <input>)
+// gera um id único na página
 export function gerarId(prefixo) {
   contadorDeIds += 1;
   return `${prefixo}-${contadorDeIds}`;
 }
 
-// transforma um texto de HTML em elementos de verdade e devolve o primeiro
 export function criarElemento(textoHtml) {
   const modelo = document.createElement("template");
   modelo.innerHTML = textoHtml.trim();

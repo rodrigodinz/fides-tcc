@@ -11,13 +11,11 @@ from ..schemas.oracoes import ConteudoDaOracao, ConteudoDoMomento
 from ..services import oracoes as servico
 from ..services.paginacao import Paginacao
 
-# sem prefix: este módulo tem duas rotas de raiz diferentes (/oracoes e /momentos)
 router = APIRouter(tags=["Orações"], responses=Respostas_De_Erro)
-# Depends(get_session): o FastAPI abre uma sessão do banco por requisição e fecha no final
 Sessao = Annotated[Session, Depends(get_session)]
 
 
-# GET /api/v1/oracoes -> os filtros são opcionais e podem ser combinados
+# GET /api/v1/oracoes: os filtros são opcionais e podem ser combinados
 @router.get("/oracoes", response_model=Pagina[ConteudoDaOracao], summary="Lista orações com filtros")
 def listar_oracoes(
     session: Sessao, paginacao: Paginacao,

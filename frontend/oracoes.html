@@ -7,17 +7,14 @@
   <meta name="theme-color" content="#EEE8DC">
   <link rel="icon" type="image/svg+xml" href="/imagens/simbolo-fides.svg">
   <title>Orações · Fides</title>
-  <!-- estilos: fontes, cores e medidas (tokens), base, componentes e páginas -->
   <link rel="stylesheet" href="/css/fontes.css">
   <link rel="stylesheet" href="/css/tokens.css">
   <link rel="stylesheet" href="/css/base.css">
   <link rel="stylesheet" href="/css/componentes.css">
   <link rel="stylesheet" href="/css/paginas.css">
-  <!-- type="module": o script pode usar import/export e só roda depois que o HTML terminou de carregar -->
   <script type="module" src="/js/paginas/oracoes.js"></script>
 </head>
-<!-- Orações com filtros (oracoes.html?momento=...&santo=...&tipo=...) -->
-<!-- data-modulo diz qual link do menu fica marcado como página atual -->
+<!-- ORAÇÕES COM FILTROS (oracoes.html?momento=...&santo=...&tipo=...) -->
 <body data-modulo="oracoes">
   <div class="estrutura-do-site">
     <a href="#conteudo" class="link-pular-para-o-conteudo">Pular para o conteúdo</a>
@@ -31,7 +28,6 @@
           <h1 class="titulo-da-pagina">Orações</h1>
           <p class="texto-de-abertura-do-cabecalho">Orações para cada momento do dia, para rezar e ler por inteiro.</p>
         </header>
-        <!-- card "Orações básicas" (só aparece sem filtros) -->
         <div id="destaque-basicas"></div>
         <!-- filtros: momento do dia, santo e tipo -->
         <section class="secao" aria-labelledby="titulo-dos-filtros" id="filtros"></section>
