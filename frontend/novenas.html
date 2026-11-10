@@ -19,20 +19,20 @@
 <!-- Catálogo de novenas (novenas.html?santo=...&pagina=...) -->
 <!-- data-modulo diz qual link do menu fica marcado como página atual -->
 <body data-modulo="novenas">
-  <div class="fd-app">
-    <a href="#conteudo" class="fd-pular">Pular para o conteúdo</a>
+  <div class="estrutura-do-site">
+    <a href="#conteudo" class="link-pular-para-o-conteudo">Pular para o conteúdo</a>
     <!-- a navbar e o menu lateral entram aqui (layout.js) -->
-    <main id="conteudo" tabindex="-1" class="fd-principal">
-      <div class="fd-trilho fd-trilho--esq" aria-hidden="true"></div>
-      <div class="fd-trilho fd-trilho--dir" aria-hidden="true"></div>
-      <div class="fd-container fd-pagina">
-        <header class="fd-cabecalho">
-          <img class="fd-orn fd-orn--titulo" src="/imagens/ornamentos/titulo-familia-b.svg" width="516" height="40" alt="" aria-hidden="true">
-          <h1 class="fd-h1">Novenas</h1>
-          <p class="fd-cabecalho__lead">Nove dias de oração e reflexão. O dia de cada novena segue a agenda, igual para todos.</p>
+    <main id="conteudo" tabindex="-1" class="conteudo-principal">
+      <div class="trilho-ornamental trilho-ornamental-da-esquerda" aria-hidden="true"></div>
+      <div class="trilho-ornamental trilho-ornamental-da-direita" aria-hidden="true"></div>
+      <div class="area-centralizada espacamento-da-pagina">
+        <header class="cabecalho-da-pagina">
+          <img class="ornamento ornamento-de-titulo" src="/imagens/ornamentos/titulo-familia-b.svg" width="516" height="40" alt="" aria-hidden="true">
+          <h1 class="titulo-da-pagina">Novenas</h1>
+          <p class="texto-de-abertura-do-cabecalho">Nove dias de oração e reflexão. O dia de cada novena segue a agenda, igual para todos.</p>
         </header>
-        <div class="fd-leitura" style="margin:32px auto 0" id="filtro-por-santo"></div>
-        <section class="fd-secao" aria-label="Lista de novenas" id="lista-de-novenas"></section>
+        <div class="largura-de-leitura" style="margin:32px auto 0" id="filtro-por-santo"></div>
+        <section class="secao" aria-label="Lista de novenas" id="lista-de-novenas"></section>
       </div>
     </main>
     <!-- o rodapé entra aqui (layout.js) -->

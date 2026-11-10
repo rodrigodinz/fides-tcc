@@ -11,8 +11,8 @@ import { registrarSantoAcessado } from "../estado/santosAcessados.js";
 import { escaparHtml } from "../componentes/html.js";
 import { icone } from "../componentes/icones.js";
 import {
-  cabecalhoPagina, cardNovena, cardOracao, carregando, estadoErro, ligarCardsDeOracao, ligarTentarNovamente,
-  migalhas, naoEncontrado, ornamento, retratoSanto, tituloSecao,
+  cabecalhoDaPagina, cardDaNovena, cardDaOracao, carregando, mensagemDeErro, ligarCardsDeOracao, ligarTentarNovamente,
+  caminhoDeNavegacao, mensagemDeNaoEncontrado, ornamento, retratoDoSanto, tituloDeSecao,
 } from "../componentes/componentes.js";
 
 montarLayout();
@@ -23,55 +23,55 @@ const santoId = lerIdDaUrl(lerParametrosDaUrl().get("id"));
 const consultarSanto = criarConsulta();
 
 const voltarParaSantos = { para: enderecos.santos(), texto: "Voltar aos santos" };
-const montarMigalhas = (nomeDoSanto) => migalhas([
+const montarCaminhoDeNavegacao = (nomeDoSanto) => caminhoDeNavegacao([
   { texto: "Início", para: enderecos.inicio() }, { texto: "Santos", para: enderecos.santos() }, { texto: nomeDoSanto ?? "Santo" },
 ]);
 
 // orações do santo vêm de GET /oracoes?santo_id=... (só busca se o santo tiver alguma)
 async function carregarOracoesDoSanto(area, totalDeOracoes) {
-  if (totalDeOracoes === 0) { area.innerHTML = '<p class="fd-aux">Nenhuma oração vinculada a este santo.</p>'; return; }
+  if (totalDeOracoes === 0) { area.innerHTML = '<p class="texto-auxiliar">Nenhuma oração vinculada a este santo.</p>'; return; }
   area.innerHTML = carregando({ quantidade: 1, texto: "Carregando orações…" });
   const resultado = await criarConsulta()((signal) => servicoOracoes.listarOracoes({ santo_id: santoId }, { signal }));
   if (resultado.estado === "erro") {
-    area.innerHTML = estadoErro({ erro: resultado.erro, conteudoBuscado: "as orações deste santo" });
+    area.innerHTML = mensagemDeErro({ erro: resultado.erro, conteudoBuscado: "as orações deste santo" });
     ligarTentarNovamente(area, () => carregarOracoesDoSanto(area, totalDeOracoes));
     return;
   }
-  area.innerHTML = `<div class="fd-pilha-cards">${resultado.dados.itens.map((oracao) => cardOracao(oracao)).join("")}</div>`;
+  area.innerHTML = `<div class="pilha-de-cards">${resultado.dados.itens.map((oracao) => cardDaOracao(oracao)).join("")}</div>`;
   ligarCardsDeOracao(area);
 }
 
 // novenas do santo vêm de GET /novenas?santo_id=... (já com a situação da agenda)
 async function carregarNovenasDoSanto(area, totalDeNovenas) {
-  if (totalDeNovenas === 0) { area.innerHTML = '<p class="fd-aux">Nenhuma novena vinculada a este santo.</p>'; return; }
+  if (totalDeNovenas === 0) { area.innerHTML = '<p class="texto-auxiliar">Nenhuma novena vinculada a este santo.</p>'; return; }
   area.innerHTML = carregando({ quantidade: 1, texto: "Carregando novenas…" });
   const resultado = await criarConsulta()((signal) => servicoNovenas.listarNovenas({ santo_id: santoId }, { signal }));
   if (resultado.estado === "erro") {
-    area.innerHTML = estadoErro({ erro: resultado.erro, conteudoBuscado: "as novenas deste santo" });
+    area.innerHTML = mensagemDeErro({ erro: resultado.erro, conteudoBuscado: "as novenas deste santo" });
     ligarTentarNovamente(area, () => carregarNovenasDoSanto(area, totalDeNovenas));
     return;
   }
-  area.innerHTML = `<div class="fd-pilha-cards">${resultado.dados.itens.map((novena) => cardNovena(novena, 3)).join("")}</div>`;
+  area.innerHTML = `<div class="pilha-de-cards">${resultado.dados.itens.map((novena) => cardDaNovena(novena, 3)).join("")}</div>`;
 }
 
 function desenharSanto(santo) {
   const listaDeLivros = santo.livros.length === 0
-    ? '<p class="fd-aux">Nenhum livro vinculado a este santo.</p>'
-    : `<ul class="fd-lista fd-lista-rica" aria-labelledby="sec-livros">${santo.livros.map((livro) =>
-      `<li><div><a class="fd-lista__titulo" href="${enderecos.livro(livro.id)}">${escaparHtml(livro.titulo)}</a><p class="fd-aux">${escaparHtml(livro.autor)}</p></div>${icone("direita")}</li>`).join("")}</ul>`;
+    ? '<p class="texto-auxiliar">Nenhum livro vinculado a este santo.</p>'
+    : `<ul class="lista lista-de-links" aria-labelledby="titulo-dos-livros">${santo.livros.map((livro) =>
+      `<li><div><a class="titulo-do-item-da-lista" href="${enderecos.livro(livro.id)}">${escaparHtml(livro.titulo)}</a><p class="texto-auxiliar">${escaparHtml(livro.autor)}</p></div>${icone("direita")}</li>`).join("")}</ul>`;
   const biografia = santo.biografia
-    ? `<p class="fd-texto-longo">${escaparHtml(santo.biografia)}</p>`
-    : '<p class="fd-aux">Biografia ainda não cadastrada.</p>';
+    ? `<p class="texto-com-quebras-de-linha">${escaparHtml(santo.biografia)}</p>`
+    : '<p class="texto-auxiliar">Biografia ainda não cadastrada.</p>';
 
-  paginaDoSanto.innerHTML = montarMigalhas(santo.nome)
-    + `<div class="fd-santo-topo"><div class="fd-moldura">${retratoSanto({ fotoUrl: santo.foto_url, nome: santo.nome, carregamento: "eager" })}</div>`
-    + `<div>${cabecalhoPagina({ titulo: santo.nome, rotulo: "Santos" })}<div class="fd-leitura fd-santo-bio">${biografia}</div></div></div>`
+  paginaDoSanto.innerHTML = montarCaminhoDeNavegacao(santo.nome)
+    + `<div class="topo-da-pagina-do-santo"><div class="moldura-do-retrato">${retratoDoSanto({ fotoUrl: santo.foto_url, nome: santo.nome, carregamento: "eager" })}</div>`
+    + `<div>${cabecalhoDaPagina({ titulo: santo.nome, rotulo: "Santos" })}<div class="largura-de-leitura biografia-do-santo">${biografia}</div></div></div>`
     + ornamento("divisor")
-    + '<div class="fd-santo-secoes"><div>'
-    + `<section aria-labelledby="sec-novenas">${tituloSecao({ id: "sec-novenas", titulo: "Novenas" })}<div id="novenas-do-santo"></div></section>`
-    + `<section class="fd-secao" aria-labelledby="sec-livros">${tituloSecao({ id: "sec-livros", titulo: "Livros" })}${listaDeLivros}</section>`
+    + '<div class="secoes-da-pagina-do-santo"><div>'
+    + `<section aria-labelledby="titulo-das-novenas">${tituloDeSecao({ id: "titulo-das-novenas", titulo: "Novenas" })}<div id="novenas-do-santo"></div></section>`
+    + `<section class="secao" aria-labelledby="titulo-dos-livros">${tituloDeSecao({ id: "titulo-dos-livros", titulo: "Livros" })}${listaDeLivros}</section>`
     + "</div>"
-    + `<section aria-labelledby="sec-oracoes">${tituloSecao({ id: "sec-oracoes", titulo: "Orações" })}<div id="oracoes-do-santo"></div></section>`
+    + `<section aria-labelledby="titulo-das-oracoes">${tituloDeSecao({ id: "titulo-das-oracoes", titulo: "Orações" })}<div id="oracoes-do-santo"></div></section>`
     + "</div>";
 
   // as duas listas carregam em paralelo, cada uma na sua área
@@ -81,18 +81,18 @@ function desenharSanto(santo) {
 
 async function carregarSanto() {
   if (santoId === null) {
-    paginaDoSanto.innerHTML = naoEncontrado({ titulo: "Santo não encontrado", voltar: voltarParaSantos });
+    paginaDoSanto.innerHTML = mensagemDeNaoEncontrado({ titulo: "Santo não encontrado", voltar: voltarParaSantos });
     return;
   }
-  paginaDoSanto.innerHTML = montarMigalhas() + carregando({ tipo: "texto", quantidade: 5, texto: "Carregando o santo…" });
+  paginaDoSanto.innerHTML = montarCaminhoDeNavegacao() + carregando({ tipo: "texto", quantidade: 5, texto: "Carregando o santo…" });
   const resultado = await consultarSanto((signal) => servicoSantos.detalharSanto(santoId, { signal }));
   if (resultado.estado === "cancelado") return;
   if (resultado.estado === "erro") {
     if (ehErroDeNaoEncontrado(resultado.erro)) {
-      paginaDoSanto.innerHTML = naoEncontrado({ titulo: "Santo não encontrado", voltar: voltarParaSantos });
+      paginaDoSanto.innerHTML = mensagemDeNaoEncontrado({ titulo: "Santo não encontrado", voltar: voltarParaSantos });
       return;
     }
-    paginaDoSanto.innerHTML = montarMigalhas() + estadoErro({ erro: resultado.erro, conteudoBuscado: "este santo" });
+    paginaDoSanto.innerHTML = montarCaminhoDeNavegacao() + mensagemDeErro({ erro: resultado.erro, conteudoBuscado: "este santo" });
     ligarTentarNovamente(paginaDoSanto, carregarSanto);
     return;
   }

@@ -8,7 +8,7 @@ import { lerIdDaUrl } from "../utils/paginacao.js";
 import { enderecos } from "../utils/enderecos.js";
 import { escaparHtml } from "../componentes/html.js";
 import {
-  alerta, cabecalhoPagina, carregando, estadoErro, ligarTentarNovamente, migalhas, naoEncontrado, ornamento,
+  alerta, cabecalhoDaPagina, carregando, mensagemDeErro, ligarTentarNovamente, caminhoDeNavegacao, mensagemDeNaoEncontrado, ornamento,
 } from "../componentes/componentes.js";
 
 montarLayout();
@@ -17,26 +17,26 @@ const paginaDoLivro = document.getElementById("pagina-do-livro");
 const livroId = lerIdDaUrl(lerParametrosDaUrl().get("id"));
 const consultarLivro = criarConsulta();
 const voltarParaLivros = { para: enderecos.livros(), texto: "Voltar aos livros" };
-const montarMigalhas = (tituloDoLivro) => migalhas([
+const montarCaminhoDeNavegacao = (tituloDoLivro) => caminhoDeNavegacao([
   { texto: "Início", para: enderecos.inicio() }, { texto: "Livros", para: enderecos.livros() }, { texto: tituloDoLivro ?? "Livro" },
 ]);
 
 // cada bloco (Resumo, Contexto histórico) só aparece se tiver texto
 const blocoDeTexto = (id, titulo, texto) =>
-  `<section class="fd-bloco" aria-labelledby="${id}">${ornamento("curto")}<h2 id="${id}" class="fd-h3">${titulo}</h2><p class="fd-texto-longo">${escaparHtml(texto)}</p></section>`;
+  `<section class="bloco-de-leitura" aria-labelledby="${id}">${ornamento("curto")}<h2 id="${id}" class="subtitulo">${titulo}</h2><p class="texto-com-quebras-de-linha">${escaparHtml(texto)}</p></section>`;
 
 function desenharLivro(livro) {
   const linkDoSanto = livro.santo
-    ? `<p style="margin-top:6px;text-align:center"><a class="fd-link fd-link--vinho" href="${enderecos.santo(livro.santo.id)}">${escaparHtml(livro.santo.nome)}</a></p>`
+    ? `<p style="margin-top:6px;text-align:center"><a class="link link-vinho" href="${enderecos.santo(livro.santo.id)}">${escaparHtml(livro.santo.nome)}</a></p>`
     : "";
   const semTexto = !livro.resumo && !livro.contexto_historico
     ? alerta({ tipo: "info", titulo: "Sem resumo cadastrado", corpo: "O resumo e o contexto histórico deste livro ainda não foram cadastrados." })
     : "";
-  paginaDoLivro.innerHTML = montarMigalhas(livro.titulo)
+  paginaDoLivro.innerHTML = montarCaminhoDeNavegacao(livro.titulo)
     + "<article>"
-    + cabecalhoPagina({ titulo: livro.titulo, rotulo: "Livro", extra: `<p class="fd-livro-autor">${escaparHtml(livro.autor)}</p>${linkDoSanto}` })
+    + cabecalhoDaPagina({ titulo: livro.titulo, rotulo: "Livro", extra: `<p class="autor-do-livro">${escaparHtml(livro.autor)}</p>${linkDoSanto}` })
     + ornamento("divisor")
-    + '<div class="fd-blocos">'
+    + '<div class="blocos-de-leitura">'
     + (livro.resumo ? blocoDeTexto("resumo", "Resumo", livro.resumo) : "")
     + (livro.contexto_historico ? blocoDeTexto("contexto", "Contexto histórico", livro.contexto_historico) : "")
     + semTexto
@@ -45,18 +45,18 @@ function desenharLivro(livro) {
 
 async function carregarLivro() {
   if (livroId === null) {
-    paginaDoLivro.innerHTML = naoEncontrado({ titulo: "Livro não encontrado", voltar: voltarParaLivros });
+    paginaDoLivro.innerHTML = mensagemDeNaoEncontrado({ titulo: "Livro não encontrado", voltar: voltarParaLivros });
     return;
   }
-  paginaDoLivro.innerHTML = montarMigalhas() + carregando({ tipo: "texto", quantidade: 5, texto: "Carregando o livro…" });
+  paginaDoLivro.innerHTML = montarCaminhoDeNavegacao() + carregando({ tipo: "texto", quantidade: 5, texto: "Carregando o livro…" });
   const resultado = await consultarLivro((signal) => servicoLivros.detalharLivro(livroId, { signal }));
   if (resultado.estado === "cancelado") return;
   if (resultado.estado === "erro") {
     if (ehErroDeNaoEncontrado(resultado.erro)) {
-      paginaDoLivro.innerHTML = naoEncontrado({ titulo: "Livro não encontrado", voltar: voltarParaLivros });
+      paginaDoLivro.innerHTML = mensagemDeNaoEncontrado({ titulo: "Livro não encontrado", voltar: voltarParaLivros });
       return;
     }
-    paginaDoLivro.innerHTML = montarMigalhas() + estadoErro({ erro: resultado.erro, conteudoBuscado: "este livro" });
+    paginaDoLivro.innerHTML = montarCaminhoDeNavegacao() + mensagemDeErro({ erro: resultado.erro, conteudoBuscado: "este livro" });
     ligarTentarNovamente(paginaDoLivro, carregarLivro);
     return;
   }

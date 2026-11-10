@@ -7,7 +7,7 @@ import { lerParametrosDaUrl, atualizarParametrosDaUrl, aoMudarParametrosDaUrl } 
 import { lerIdDaUrl, lerNumeroDaPagina } from "../utils/paginacao.js";
 import { Nomes_Dos_Icones } from "../componentes/icones.js";
 import {
-  alerta, botao, card, cardOracao, carregando, chips, estadoErro, estadoVazio, ligarCardsDeOracao, ligarPaginacao,
+  alerta, botao, card, cardDaOracao, carregando, grupoDeOpcoes, mensagemDeErro, mensagemDeListaVazia, ligarCardsDeOracao, ligarPaginacao,
   ligarTentarNovamente, paginacao, seletor,
 } from "../componentes/componentes.js";
 
@@ -66,10 +66,10 @@ function irParaPagina(numeroDaPagina) {
 function desenharDestaque() {
   const filtros = lerFiltros();
   areaDoDestaque.innerHTML = filtros.tipo !== "basicas" && !filtros.temFiltroAtivo
-    ? `<div class="fd-secao">${card({
+    ? `<div class="secao">${card({
       destaque: true, titulo: "Orações básicas", rotulo: "Para começar", nivel: 2,
       acoes: botao({ variante: "primario", texto: "Ver orações básicas", atributos: "data-ver-basicas" }),
-      corpo: '<p class="fd-card__corpo-texto">As orações mais conhecidas e rezadas, reunidas em um só lugar.</p>',
+      corpo: '<p class="texto-do-card">As orações mais conhecidas e rezadas, reunidas em um só lugar.</p>',
     })}</div>`
     : "";
   areaDoDestaque.querySelector("[data-ver-basicas]")?.addEventListener("click", () => definirFiltro("tipo", "basicas"));
@@ -86,10 +86,10 @@ function desenharFiltros() {
 
 function desenharControlesDosFiltros() {
   const filtros = lerFiltros();
-  // cada momento do dia vira um chip; o ícone é o do código do momento (ao_acordar, missa...)
-  const chipsDosMomentos = momentosDoDia === "erro"
-    ? estadoErro({ erro: erroDosMomentos, conteudoBuscado: "os momentos do dia" })
-    : chips({
+  // cada momento do dia vira um botão de opção; o ícone é o do código do momento (ao_acordar, missa...)
+  const opcoesDosMomentos = momentosDoDia === "erro"
+    ? mensagemDeErro({ erro: erroDosMomentos, conteudoBuscado: "os momentos do dia" })
+    : grupoDeOpcoes({
       rotulo: "Momento do dia", valor: filtros.momento ?? "",
       opcoes: (momentosDoDia ?? []).map((momento) => ({ valor: momento.id, rotulo: momento.nome, icone: Nomes_Dos_Icones.includes(momento.codigo) ? momento.codigo : undefined })),
     });
@@ -98,20 +98,20 @@ function desenharControlesDosFiltros() {
     : "";
   const opcoesDeSanto = Array.isArray(santosDoFiltro) ? santosDoFiltro.map((santo) => ({ valor: santo.id, rotulo: santo.nome })) : [];
 
-  areaDosFiltros.innerHTML = '<h2 id="filtros-titulo" class="fd-sr">Filtros</h2>'
-    + chipsDosMomentos
-    + '<div class="fd-filtros" style="margin-top:20px">'
+  areaDosFiltros.innerHTML = '<h2 id="titulo-dos-filtros" class="somente-para-leitor-de-tela">Filtros</h2>'
+    + opcoesDosMomentos
+    + '<div class="filtros" style="margin-top:20px">'
     + seletor({ rotulo: "Santo", valor: filtros.santo ?? "", opcoes: opcoesDeSanto, textoDeTodos: "Todos os santos", desabilitado: !Array.isArray(santosDoFiltro) })
     + seletor({ rotulo: "Tipo", valor: filtros.tipo, opcoes: Tipos_De_Oracao, textoDeTodos: "Todas as orações" })
     + "</div>"
     + avisoDoFiltroDeSanto
-    + `<div class="fd-filtros__rodape"><p class="fd-aux" role="status">${textoDaContagem}</p>`
+    + `<div class="rodape-dos-filtros"><p class="texto-auxiliar" role="status">${textoDaContagem}</p>`
     + (filtros.temFiltroAtivo ? botao({ variante: "secundario", pequeno: true, icone: "fechar", texto: "Limpar filtros", atributos: "data-limpar-filtros" }) : "")
     + "</div>";
 
-  // clicar no chip ligado desliga o filtro (por isso o valor vira "")
-  areaDosFiltros.querySelectorAll(".fd-chip").forEach((chip) => chip.addEventListener("click", () =>
-    definirFiltro("momento", chip.getAttribute("aria-pressed") === "true" ? "" : chip.dataset.valor)));
+  // clicar no botão de opção ligado desliga o filtro (por isso o valor vira "")
+  areaDosFiltros.querySelectorAll(".botao-de-opcao").forEach((botaoDeOpcao) => botaoDeOpcao.addEventListener("click", () =>
+    definirFiltro("momento", botaoDeOpcao.getAttribute("aria-pressed") === "true" ? "" : botaoDeOpcao.dataset.valor)));
   const [seletorDeSanto, seletorDeTipo] = areaDosFiltros.querySelectorAll("select");
   seletorDeSanto.addEventListener("change", () => definirFiltro("santo", seletorDeSanto.value));
   seletorDeTipo.addEventListener("change", () => definirFiltro("tipo", seletorDeTipo.value));
@@ -155,11 +155,11 @@ async function carregarOracoes() {
   areaDasOracoes.setAttribute("aria-busy", "false");
 
   if (resultado.estado === "erro") {
-    areaDasOracoes.innerHTML = estadoErro({ erro: resultado.erro, conteudoBuscado: "as orações" });
+    areaDasOracoes.innerHTML = mensagemDeErro({ erro: resultado.erro, conteudoBuscado: "as orações" });
     ligarTentarNovamente(areaDasOracoes, carregarOracoes);
   } else if (resultado.estado === "vazio") {
     textoDaContagem = "Nenhuma oração";
-    areaDasOracoes.innerHTML = estadoVazio({
+    areaDasOracoes.innerHTML = mensagemDeListaVazia({
       titulo: "Nenhuma oração com esses filtros", texto: "Experimente outro momento do dia ou outro santo.",
       acao: filtros.temFiltroAtivo ? botao({ variante: "secundario", icone: "fechar", texto: "Limpar filtros", atributos: "data-limpar-filtros" }) : null,
     });
@@ -168,7 +168,7 @@ async function carregarOracoes() {
     const paginaDeOracoes = resultado.dados;
     const totalDeOracoes = paginaDeOracoes.total_registros_filtros;
     textoDaContagem = `${totalDeOracoes} ${totalDeOracoes === 1 ? "oração" : "orações"}`;
-    areaDasOracoes.innerHTML = `<div class="fd-grade-oracoes">${paginaDeOracoes.itens.map((oracao) => cardOracao(oracao, 2)).join("")}</div>`
+    areaDasOracoes.innerHTML = `<div class="grade-de-oracoes">${paginaDeOracoes.itens.map((oracao) => cardDaOracao(oracao, 2)).join("")}</div>`
       + paginacao({ pagina: paginaDeOracoes.pagina, totalPaginas: paginaDeOracoes.total_paginas, totalRegistros: totalDeOracoes, rotulo: "Páginas de orações" });
     ligarCardsDeOracao(areaDasOracoes);
     ligarPaginacao(areaDasOracoes, irParaPagina);

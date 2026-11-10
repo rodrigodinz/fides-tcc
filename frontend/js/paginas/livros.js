@@ -10,7 +10,7 @@ import { listarSantosAcessados } from "../estado/santosAcessados.js";
 import { escaparHtml } from "../componentes/html.js";
 import { icone } from "../componentes/icones.js";
 import {
-  botao, botaoLink, card, carregando, estadoErro, estadoVazio, ligarPaginacao, ligarTentarNovamente, paginacao, seletor,
+  botao, botaoLink, card, carregando, mensagemDeErro, mensagemDeListaVazia, ligarPaginacao, ligarTentarNovamente, paginacao, seletor,
 } from "../componentes/componentes.js";
 
 montarLayout();
@@ -31,8 +31,8 @@ async function carregarRecomendacoes() {
   if (idsDosSantosAcessados.length === 0) {
     areaDasRecomendacoes.innerHTML = card({
       simples: true, nivel: 3, titulo: "Ainda sem recomendações",
-      corpo: '<p class="fd-card__corpo-texto">Visite a página de um santo e os livros ligados a ele aparecerão aqui.</p>'
-        + `<div class="fd-card__acoes">${botaoLink({ variante: "secundario", icone: "santos", para: enderecos.santos(), texto: "Explorar santos" })}</div>`,
+      corpo: '<p class="texto-do-card">Visite a página de um santo e os livros ligados a ele aparecerão aqui.</p>'
+        + `<div class="botoes-do-card">${botaoLink({ variante: "secundario", icone: "santos", para: enderecos.santos(), texto: "Explorar santos" })}</div>`,
     });
     return;
   }
@@ -42,12 +42,12 @@ async function carregarRecomendacoes() {
     { verificarSeVazio: paginaEstaVazia },
   );
   if (resultado.estado === "erro") {
-    areaDasRecomendacoes.innerHTML = estadoErro({ erro: resultado.erro, conteudoBuscado: "as recomendações" });
+    areaDasRecomendacoes.innerHTML = mensagemDeErro({ erro: resultado.erro, conteudoBuscado: "as recomendações" });
     ligarTentarNovamente(areaDasRecomendacoes, carregarRecomendacoes);
   } else if (resultado.estado === "vazio") {
-    areaDasRecomendacoes.innerHTML = '<p class="fd-aux">Os santos que você visitou ainda não têm livros cadastrados. Veja o catálogo abaixo.</p>';
+    areaDasRecomendacoes.innerHTML = '<p class="texto-auxiliar">Os santos que você visitou ainda não têm livros cadastrados. Veja o catálogo abaixo.</p>';
   } else {
-    areaDasRecomendacoes.innerHTML = `<div class="fd-grade fd-grade--3">${resultado.dados.itens.map((livro) =>
+    areaDasRecomendacoes.innerHTML = `<div class="grade grade-de-3-colunas">${resultado.dados.itens.map((livro) =>
       card({ titulo: livro.titulo, para: enderecos.livro(livro.id), meta: escreverAutoriaDoLivro(livro), rotulo: "Recomendação de leitura" })).join("")}</div>`;
   }
 }
@@ -98,10 +98,10 @@ async function carregarCatalogo() {
   if (resultado.estado === "cancelado") return;
 
   if (resultado.estado === "erro") {
-    areaDoCatalogo.innerHTML = estadoErro({ erro: resultado.erro, conteudoBuscado: "os livros" });
+    areaDoCatalogo.innerHTML = mensagemDeErro({ erro: resultado.erro, conteudoBuscado: "os livros" });
     ligarTentarNovamente(areaDoCatalogo, carregarCatalogo);
   } else if (resultado.estado === "vazio") {
-    areaDoCatalogo.innerHTML = estadoVazio({
+    areaDoCatalogo.innerHTML = mensagemDeListaVazia({
       titulo: "Nenhum livro encontrado",
       texto: santoFiltrado ? "Este santo ainda não tem livros cadastrados." : null,
       acao: santoFiltrado ? botao({ variante: "secundario", icone: "fechar", texto: "Ver todos os livros", atributos: "data-ver-todos" }) : null,
@@ -110,8 +110,8 @@ async function carregarCatalogo() {
   } else {
     const paginaDeLivros = resultado.dados;
     const itensDaLista = paginaDeLivros.itens.map((livro) =>
-      `<li><div><a class="fd-lista__titulo" href="${enderecos.livro(livro.id)}">${escaparHtml(livro.titulo)}</a><p class="fd-aux">${escaparHtml(escreverAutoriaDoLivro(livro))}</p></div>${icone("direita")}</li>`).join("");
-    areaDoCatalogo.innerHTML = `<ul class="fd-lista fd-lista-rica">${itensDaLista}</ul>`
+      `<li><div><a class="titulo-do-item-da-lista" href="${enderecos.livro(livro.id)}">${escaparHtml(livro.titulo)}</a><p class="texto-auxiliar">${escaparHtml(escreverAutoriaDoLivro(livro))}</p></div>${icone("direita")}</li>`).join("");
+    areaDoCatalogo.innerHTML = `<ul class="lista lista-de-links">${itensDaLista}</ul>`
       + paginacao({ pagina: paginaDeLivros.pagina, totalPaginas: paginaDeLivros.total_paginas, totalRegistros: paginaDeLivros.total_registros_filtros, rotulo: "Páginas de livros" });
     ligarPaginacao(areaDoCatalogo, irParaPagina);
   }

@@ -11,7 +11,7 @@ import { enderecos } from "../utils/enderecos.js";
 import { escaparHtml } from "../componentes/html.js";
 import { icone } from "../componentes/icones.js";
 import {
-  avisoDemonstracao, botaoLink, cabecalhoPagina, card, carregando, erroDeData, ligarSeletorData, seletorData, tituloSecao,
+  avisoDemonstracao, botaoLink, cabecalhoDaPagina, card, carregando, erroDeData, ligarSeletorDeData, seletorDeData, tituloDeSecao,
 } from "../componentes/componentes.js";
 
 montarLayout();
@@ -23,11 +23,11 @@ let periodoConhecido = null;
 
 function desenharTopo({ data, conteudosDoDia }) {
   const dataExibida = conteudosDoDia?.data ?? data ?? periodoConhecido?.hoje;
-  topoDaPagina.innerHTML = cabecalhoPagina({
+  topoDaPagina.innerHTML = cabecalhoDaPagina({
     titulo: "Agenda do dia", rotulo: dataExibida ? escreverDataPorExtenso(dataExibida) : "Agenda",
     textoDeAbertura: "A liturgia e as novenas em andamento na data escolhida.",
-  }) + (periodoConhecido && dataExibida ? seletorData({ data: dataExibida, periodo: periodoConhecido }) : "");
-  ligarSeletorData(topoDaPagina, (dataEscolhida) => mudarData(dataEscolhida));
+  }) + (periodoConhecido && dataExibida ? seletorDeData({ data: dataExibida, periodo: periodoConhecido }) : "");
+  ligarSeletorDeData(topoDaPagina, (dataEscolhida) => mudarData(dataEscolhida));
 }
 
 function mudarData(dataEscolhida) {
@@ -38,8 +38,8 @@ function mudarData(dataEscolhida) {
 function desenharAgenda(conteudosDoDia) {
   const parametroDaData = conteudosDoDia.data;
   const novenasDoDia = conteudosDoDia.novenas_em_andamento.length === 0
-    ? `<p class="fd-aux">Nenhuma novena em andamento nesta data. <a class="fd-link" href="${enderecos.novenas()}">Ver todas as novenas</a></p>`
-    : `<div class="fd-grade fd-grade--2">${conteudosDoDia.novenas_em_andamento.map((novenaEmAndamento) => card({
+    ? `<p class="texto-auxiliar">Nenhuma novena em andamento nesta data. <a class="link" href="${enderecos.novenas()}">Ver todas as novenas</a></p>`
+    : `<div class="grade grade-de-2-colunas">${conteudosDoDia.novenas_em_andamento.map((novenaEmAndamento) => card({
       destaque: true, titulo: novenaEmAndamento.novena.titulo, para: enderecos.novena(novenaEmAndamento.novena.id),
       rotulo: `Dia ${novenaEmAndamento.dia_atual} de ${novenaEmAndamento.total_dias}`, meta: novenaEmAndamento.novena.santo?.nome,
       acoes: botaoLink({ variante: "especial", texto: `Ler o dia ${novenaEmAndamento.dia_atual}`, para: enderecos.novena(novenaEmAndamento.novena.id, novenaEmAndamento.dia_atual) }),
@@ -49,27 +49,27 @@ function desenharAgenda(conteudosDoDia) {
   const cardDaLiturgiaDoDia = card({
     titulo: "Liturgia do Dia", para: enderecos.liturgiaDoDia(parametroDaData), meta: liturgiaDoDia?.santo_celebrado ?? null,
     corpo: liturgiaDoDia
-      ? `<ul class="fd-lista" style="margin-top:12px"><li>Primeira Leitura</li><li>Salmo Responsorial</li>${liturgiaDoDia.segunda_leitura ? "<li>Segunda Leitura</li>" : ""}<li>Evangelho</li></ul>`
-      : '<p class="fd-card__corpo-texto">Não há Liturgia do Dia cadastrada para esta data.</p>',
+      ? `<ul class="lista" style="margin-top:12px"><li>Primeira Leitura</li><li>Salmo Responsorial</li>${liturgiaDoDia.segunda_leitura ? "<li>Segunda Leitura</li>" : ""}<li>Evangelho</li></ul>`
+      : '<p class="texto-do-card">Não há Liturgia do Dia cadastrada para esta data.</p>',
   });
   const cardDaLiturgiaDasHoras = card({
     titulo: "Liturgia das Horas", para: enderecos.liturgiaDasHoras(parametroDaData),
     corpo: conteudosDoDia.liturgia_das_horas.length > 0
-      ? `<ul class="fd-lista" style="margin-top:12px">${ordenarHorasDaLiturgia(conteudosDoDia.liturgia_das_horas).map((hora) =>
-        `<li>${icone("horas", { classe: "fd-ico--inline" })} ${escaparHtml(hora.bloco.nome)}</li>`).join("")}</ul>`
-      : '<p class="fd-card__corpo-texto">Não há Liturgia das Horas cadastrada para esta data.</p>',
+      ? `<ul class="lista" style="margin-top:12px">${ordenarHorasDaLiturgia(conteudosDoDia.liturgia_das_horas).map((hora) =>
+        `<li>${icone("horas", { classe: "icone-no-meio-do-texto" })} ${escaparHtml(hora.bloco.nome)}</li>`).join("")}</ul>`
+      : '<p class="texto-do-card">Não há Liturgia das Horas cadastrada para esta data.</p>',
   });
 
   conteudoDaAgenda.innerHTML =
-    `<section class="fd-secao" aria-labelledby="ag-novenas">${tituloSecao({ id: "ag-novenas", titulo: "Novenas em andamento" })}${novenasDoDia}</section>`
-    + `<section class="fd-secao" aria-labelledby="ag-liturgia">${tituloSecao({ id: "ag-liturgia", titulo: "Liturgia" })}${avisoDemonstracao(conteudosDoDia.aviso)}`
-    + `<div class="fd-grade fd-grade--2" style="margin-top:24px">${cardDaLiturgiaDoDia}${cardDaLiturgiaDasHoras}</div></section>`;
+    `<section class="secao" aria-labelledby="titulo-das-novenas-de-hoje">${tituloDeSecao({ id: "titulo-das-novenas-de-hoje", titulo: "Novenas em andamento" })}${novenasDoDia}</section>`
+    + `<section class="secao" aria-labelledby="titulo-da-liturgia-de-hoje">${tituloDeSecao({ id: "titulo-da-liturgia-de-hoje", titulo: "Liturgia" })}${avisoDemonstracao(conteudosDoDia.aviso)}`
+    + `<div class="grade grade-de-2-colunas" style="margin-top:24px">${cardDaLiturgiaDoDia}${cardDaLiturgiaDasHoras}</div></section>`;
 }
 
 async function carregarAgenda() {
   const { data, dataInvalida } = lerDataDaUrl();
   desenharTopo({ data });
-  conteudoDaAgenda.innerHTML = `<div class="fd-secao">${carregando({ quantidade: 3, texto: "Carregando a agenda…" })}</div>`;
+  conteudoDaAgenda.innerHTML = `<div class="secao">${carregando({ quantidade: 3, texto: "Carregando a agenda…" })}</div>`;
   const resultado = await consultarAgenda((signal) => {
     if (dataInvalida) return Promise.reject(new ErroDaApi({ codigo: "PARAMETRO_INVALIDO", mensagem: "Data inválida." }));
     return servicoAgenda.verConteudosDoDia(data, { signal });
@@ -77,7 +77,7 @@ async function carregarAgenda() {
   if (resultado.estado === "cancelado") return;
 
   if (resultado.estado === "erro") {
-    conteudoDaAgenda.innerHTML = `<div class="fd-secao fd-leitura" style="margin-inline:auto">${erroDeData(resultado.erro)}</div>`;
+    conteudoDaAgenda.innerHTML = `<div class="secao largura-de-leitura" style="margin-inline:auto">${erroDeData(resultado.erro)}</div>`;
     conteudoDaAgenda.querySelector('[data-acao="ir-para-hoje"]')?.addEventListener("click", () => mudarData(undefined));
     conteudoDaAgenda.querySelector('[data-acao="tentar-novamente"]')?.addEventListener("click", carregarAgenda);
     return;

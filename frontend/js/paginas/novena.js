@@ -14,8 +14,8 @@ import { alternarDiaMarcado, lerNovenaPessoal, salvarNovenaPessoal, Limite_De_Ca
 import { escaparHtml } from "../componentes/html.js";
 import { icone } from "../componentes/icones.js";
 import {
-  alerta, botao, botaoLink, cabecalhoPagina, calendarioNovena, carregando, estadoErro, ligarTentarNovamente, migalhas,
-  naoEncontrado, ornamento,
+  alerta, botao, botaoLink, cabecalhoDaPagina, calendarioDaNovena, carregando, mensagemDeErro, ligarTentarNovamente, caminhoDeNavegacao,
+  mensagemDeNaoEncontrado, ornamento,
 } from "../componentes/componentes.js";
 
 montarLayout();
@@ -34,35 +34,41 @@ let diasDaNovena = null;  // resposta de GET /novenas/{id}/dias
 let dadosPessoais = { marcados: [], pedidos: "" };  // o que a pessoa guardou neste aparelho
 let falhouAoGravar = false;
 
-const montarMigalhas = (tituloDaNovena) => migalhas([
+const montarCaminhoDeNavegacao = (tituloDaNovena) => caminhoDeNavegacao([
   { texto: "Início", para: enderecos.inicio() }, { texto: "Novenas", para: enderecos.novenas() }, { texto: tituloDaNovena ?? "Novena" },
 ]);
 
 // ---------------------------------------------------------------- quadro da agenda
+const Classes_Das_Situacoes = {
+  em_andamento: "situacao-em-andamento",
+  agendada: "situacao-agendada",
+  sem_agenda: "situacao-sem-agenda",
+};
+
 // situação (em andamento / agendada / não agendada), período e o "Dia X de 9"
 function desenharAgendaDaNovena() {
   const situacaoDaAgenda = descreverAgendaDaNovena(novena.agenda, novena.total_dias);
   const agenda = novena.agenda;
   const periodo = agenda
-    ? `<p class="fd-aux" style="margin-top:4px">De ${escreverDataPorExtenso(agenda.data_inicio, { comDiaDaSemana: false })} a ${escreverDataPorExtenso(agenda.data_fim, { comDiaDaSemana: false })}</p>`
+    ? `<p class="texto-auxiliar" style="margin-top:4px">De ${escreverDataPorExtenso(agenda.data_inicio, { comDiaDaSemana: false })} a ${escreverDataPorExtenso(agenda.data_fim, { comDiaDaSemana: false })}</p>`
     : "";
   const destaqueDoDia = situacaoDaAgenda.tipo === "em_andamento"
-    ? `<p class="fd-dia-x" aria-label="${situacaoDaAgenda.texto}"><small>Dia</small>${agenda.dia_atual}<small>de ${novena.total_dias}</small></p>`
-    : `<p class="fd-h4" style="color:var(--azul-profundo)">${escaparHtml(situacaoDaAgenda.tipo === "agendada" ? situacaoDaAgenda.texto : "Sem agenda ativa")}</p>`;
+    ? `<p class="dia-atual-em-destaque" aria-label="${situacaoDaAgenda.texto}"><small>Dia</small>${agenda.dia_atual}<small>de ${novena.total_dias}</small></p>`
+    : `<p class="subtitulo-menor" style="color:var(--azul-profundo)">${escaparHtml(situacaoDaAgenda.tipo === "agendada" ? situacaoDaAgenda.texto : "Sem agenda ativa")}</p>`;
   const explicacao = situacaoDaAgenda.tipo === "sem_agenda"
     ? "Os nove dias podem ser lidos livremente; não há datas definidas."
     : "O dia atual segue a agenda da novena e é o mesmo para todos. Você pode ler qualquer dia.";
-  return '<section class="fd-card fd-card--simples" aria-labelledby="agenda-titulo"><div class="fd-agenda-resumo"><div>'
-    + '<h2 id="agenda-titulo" class="fd-rotulo">Agenda da novena</h2>'
-    + `<p class="fd-situacao fd-situacao--${situacaoDaAgenda.tipo}" style="margin-top:6px">${situacaoDaAgenda.rotulo}</p>${periodo}</div>`
-    + `${destaqueDoDia}</div><p class="fd-aux" style="margin-top:12px">${explicacao}</p></section>`;
+  return '<section class="card card-simples" aria-labelledby="titulo-da-agenda"><div class="resumo-da-agenda"><div>'
+    + '<h2 id="titulo-da-agenda" class="rotulo-pequeno">Agenda da novena</h2>'
+    + `<p class="situacao ${Classes_Das_Situacoes[situacaoDaAgenda.tipo]}" style="margin-top:6px">${situacaoDaAgenda.rotulo}</p>${periodo}</div>`
+    + `${destaqueDoDia}</div><p class="texto-auxiliar" style="margin-top:12px">${explicacao}</p></section>`;
 }
 
 // ---------------------------------------------------------------- calendário dos nove dias
 function desenharCalendario() {
   const areaDoCalendario = document.getElementById("calendario-da-novena");
-  areaDoCalendario.innerHTML = '<section aria-labelledby="cal-titulo"><h2 id="cal-titulo" class="fd-h3">Os nove dias</h2>'
-    + calendarioNovena({
+  areaDoCalendario.innerHTML = '<section aria-labelledby="titulo-do-calendario"><h2 id="titulo-do-calendario" class="subtitulo">Os nove dias</h2>'
+    + calendarioDaNovena({
       novenaId, dias: diasDaNovena.dias,
       diaAtual: descreverAgendaDaNovena(diasDaNovena.agenda, novena.total_dias).diaAtual,
       marcados: dadosPessoais.marcados, diaSelecionado: numeroDoDiaValido() ? numeroDoDia : null,
@@ -75,7 +81,7 @@ async function carregarCalendario() {
   areaDoCalendario.innerHTML = carregando({ quantidade: 1, texto: "Carregando o calendário…" });
   const resultado = await criarConsulta()((signal) => servicoNovenas.listarDiasDaNovena(novenaId, { signal }));
   if (resultado.estado === "erro") {
-    areaDoCalendario.innerHTML = estadoErro({ erro: resultado.erro, conteudoBuscado: "o calendário da novena" });
+    areaDoCalendario.innerHTML = mensagemDeErro({ erro: resultado.erro, conteudoBuscado: "o calendário da novena" });
     ligarTentarNovamente(areaDoCalendario, carregarCalendario);
     return;
   }
@@ -91,32 +97,32 @@ async function carregarConteudoDoDia() {
   const resultado = await criarConsulta()((signal) => servicoNovenas.verDiaDaNovena(novenaId, numeroDoDia, { signal }));
   if (resultado.estado === "erro") {
     if (ehErroDeNaoEncontrado(resultado.erro)) {
-      areaDoDia.innerHTML = naoEncontrado({ titulo: `Dia ${numeroDoDia} não encontrado`, voltar: { para: enderecos.novena(novenaId), texto: "Voltar à novena" } });
+      areaDoDia.innerHTML = mensagemDeNaoEncontrado({ titulo: `Dia ${numeroDoDia} não encontrado`, voltar: { para: enderecos.novena(novenaId), texto: "Voltar à novena" } });
       return;
     }
-    areaDoDia.innerHTML = estadoErro({ erro: resultado.erro, conteudoBuscado: `o dia ${numeroDoDia}` });
+    areaDoDia.innerHTML = mensagemDeErro({ erro: resultado.erro, conteudoBuscado: `o dia ${numeroDoDia}` });
     ligarTentarNovamente(areaDoDia, carregarConteudoDoDia);
     return;
   }
   const diaDaNovena = resultado.dados;
   // <details>: caixa que abre e fecha sozinha, sem JavaScript; a primeira oração já vem aberta
   const oracoesDoDia = diaDaNovena.oracoes.length === 0
-    ? '<p class="fd-aux">Nenhuma oração base cadastrada para este dia.</p>'
+    ? '<p class="texto-auxiliar">Nenhuma oração base cadastrada para este dia.</p>'
     : diaDaNovena.oracoes.map((oracao, posicao) =>
-      `<details class="fd-expansivel"${posicao === 0 ? " open" : ""}><summary>${escaparHtml(oracao.titulo)}${icone("baixo")}</summary><div class="fd-expansivel__corpo"><p class="fd-texto-longo">${escaparHtml(oracao.texto)}</p></div></details>`).join("");
+      `<details class="secao-expansivel"${posicao === 0 ? " open" : ""}><summary>${escaparHtml(oracao.titulo)}${icone("baixo")}</summary><div class="conteudo-da-secao-expansivel"><p class="texto-com-quebras-de-linha">${escaparHtml(oracao.texto)}</p></div></details>`).join("");
   const diaAnterior = diaDaNovena.dia_anterior
     ? botaoLink({ variante: "secundario", icone: "esquerda", texto: `Dia ${diaDaNovena.dia_anterior}`, para: enderecos.novena(novenaId, diaDaNovena.dia_anterior) })
     : "<span></span>";
   const proximoDia = diaDaNovena.proximo_dia
     ? botaoLink({ variante: "secundario", iconeDepois: "direita", texto: `Dia ${diaDaNovena.proximo_dia}`, para: enderecos.novena(novenaId, diaDaNovena.proximo_dia) })
     : "<span></span>";
-  areaDoDia.innerHTML = '<article aria-labelledby="dia-titulo">'
-    + `<p class="fd-rotulo">Dia ${diaDaNovena.numero_do_dia} de ${diaDaNovena.total_dias}${diaDaNovena.data ? ` · ${escreverDataPorExtenso(diaDaNovena.data, { comAno: false })}` : ""}</p>`
-    + `<h2 id="dia-titulo" class="fd-h2" style="margin-top:4px">Reflexão do dia ${diaDaNovena.numero_do_dia}</h2>`
-    + `<p class="fd-leitura fd-reflexao fd-texto-longo" style="margin-top:16px">${escaparHtml(diaDaNovena.texto_reflexao)}</p>`
-    + '<h3 class="fd-h3" style="margin-top:40px;margin-bottom:12px">Orações do dia</h3>'
+  areaDoDia.innerHTML = '<article aria-labelledby="titulo-do-dia">'
+    + `<p class="rotulo-pequeno">Dia ${diaDaNovena.numero_do_dia} de ${diaDaNovena.total_dias}${diaDaNovena.data ? ` · ${escreverDataPorExtenso(diaDaNovena.data, { comAno: false })}` : ""}</p>`
+    + `<h2 id="titulo-do-dia" class="titulo-de-secao" style="margin-top:4px">Reflexão do dia ${diaDaNovena.numero_do_dia}</h2>`
+    + `<p class="largura-de-leitura texto-de-reflexao texto-com-quebras-de-linha" style="margin-top:16px">${escaparHtml(diaDaNovena.texto_reflexao)}</p>`
+    + '<h3 class="subtitulo" style="margin-top:40px;margin-bottom:12px">Orações do dia</h3>'
     + oracoesDoDia
-    + `<nav class="fd-nav-dias" aria-label="Navegar entre os dias">${diaAnterior}${proximoDia}</nav>`
+    + `<nav class="navegacao-entre-os-dias" aria-label="Navegar entre os dias">${diaAnterior}${proximoDia}</nav>`
     + "</article>";
 }
 
@@ -144,16 +150,16 @@ function desenharNesteDispositivo() {
   // lembra qual controle estava focado para devolver o foco depois de redesenhar
   const chaveFocada = area.contains(document.activeElement) ? document.activeElement.dataset.chave : null;
   const diaMarcado = dadosPessoais.marcados.includes(numeroDoDia);
-  area.innerHTML = '<section class="fd-pessoal" aria-labelledby="pessoal-titulo">'
-    + `<h2 id="pessoal-titulo" class="fd-h4" style="display:flex;gap:10px;align-items:center">${icone("dispositivo")}Neste dispositivo</h2>`
-    + '<p class="fd-aux" style="margin-top:6px">Suas marcações e pedidos ficam só neste aparelho. Não são enviados e não mudam o dia da agenda.</p>'
-    + `<label class="fd-marcar" style="margin-top:16px"><input type="checkbox" data-chave="marcar"${diaMarcado ? " checked" : ""}>Rezei o dia ${numeroDoDia}</label>`
-    + `<p class="fd-aux">Você marcou ${dadosPessoais.marcados.length} de ${novena.total_dias} dias.</p>`
+  area.innerHTML = '<section class="area-pessoal" aria-labelledby="titulo-da-area-pessoal">'
+    + `<h2 id="titulo-da-area-pessoal" class="subtitulo-menor" style="display:flex;gap:10px;align-items:center">${icone("dispositivo")}Neste dispositivo</h2>`
+    + '<p class="texto-auxiliar" style="margin-top:6px">Suas marcações e pedidos ficam só neste aparelho. Não são enviados e não mudam o dia da agenda.</p>'
+    + `<label class="marcar-como-rezado" style="margin-top:16px"><input type="checkbox" data-chave="marcar"${diaMarcado ? " checked" : ""}>Rezei o dia ${numeroDoDia}</label>`
+    + `<p class="texto-auxiliar">Você marcou ${dadosPessoais.marcados.length} de ${novena.total_dias} dias.</p>`
     + (dadosPessoais.marcados.length > 0 ? botao({ variante: "texto", pequeno: true, texto: "Limpar marcações", atributos: 'data-chave="limpar-marcacoes"' }) : "")
-    + '<div class="fd-campo" style="margin-top:20px"><label for="pedidos">Meus pedidos</label>'
-    + `<textarea id="pedidos" class="fd-textarea" maxlength="${Limite_De_Caracteres_Dos_Pedidos}" placeholder="Escreva suas intenções para esta novena." data-chave="pedidos">${escaparHtml(dadosPessoais.pedidos)}</textarea>`
-    + `<span class="fd-aux" data-contador>${dadosPessoais.pedidos.length}/${Limite_De_Caracteres_Dos_Pedidos} caracteres</span></div>`
-    + '<div class="fd-linha-acoes" style="margin-top:12px">'
+    + '<div class="campo-de-formulario" style="margin-top:20px"><label for="pedidos">Meus pedidos</label>'
+    + `<textarea id="pedidos" class="area-de-texto" maxlength="${Limite_De_Caracteres_Dos_Pedidos}" placeholder="Escreva suas intenções para esta novena." data-chave="pedidos">${escaparHtml(dadosPessoais.pedidos)}</textarea>`
+    + `<span class="texto-auxiliar" data-contador>${dadosPessoais.pedidos.length}/${Limite_De_Caracteres_Dos_Pedidos} caracteres</span></div>`
+    + '<div class="linha-de-botoes" style="margin-top:12px">'
     + botao({ variante: "secundario", icone: "check", texto: "Guardar pedidos", atributos: 'data-chave="guardar" disabled' })
     + (dadosPessoais.pedidos ? botao({ variante: "texto", icone: "limpar", texto: "Apagar pedidos", atributos: 'data-chave="apagar"' }) : "")
     + "</div>"
@@ -214,13 +220,13 @@ const numeroDoDiaValido = () => numeroDoDia !== null && numeroDoDia >= 1 && nume
 
 function desenharNovena() {
   const linkDoSanto = novena.santo
-    ? `<p style="margin-top:12px"><a class="fd-link fd-link--vinho" href="${enderecos.santo(novena.santo.id)}">${escaparHtml(novena.santo.nome)}</a></p>`
+    ? `<p style="margin-top:12px"><a class="link link-vinho" href="${enderecos.santo(novena.santo.id)}">${escaparHtml(novena.santo.nome)}</a></p>`
     : "";
-  paginaDaNovena.innerHTML = montarMigalhas(novena.titulo)
-    + cabecalhoPagina({ titulo: novena.titulo, rotulo: "Novena", textoDeAbertura: novena.descricao, extra: linkDoSanto })
+  paginaDaNovena.innerHTML = montarCaminhoDeNavegacao(novena.titulo)
+    + cabecalhoDaPagina({ titulo: novena.titulo, rotulo: "Novena", textoDeAbertura: novena.descricao, extra: linkDoSanto })
     + ornamento("divisor")
-    + `<div class="fd-novena-topo">${desenharAgendaDaNovena()}<div id="calendario-da-novena"></div></div>`
-    + '<div class="fd-novena-dia"><div id="conteudo-do-dia"></div>'
+    + `<div class="topo-da-pagina-da-novena">${desenharAgendaDaNovena()}<div id="calendario-da-novena"></div></div>`
+    + '<div class="conteudo-do-dia-da-novena"><div id="conteudo-do-dia"></div>'
     + (numeroDoDiaValido() ? '<div id="neste-dispositivo"></div>' : "")
     + "</div>";
 
@@ -228,7 +234,7 @@ function desenharNovena() {
     desenharNesteDispositivo();
     carregarConteudoDoDia();
   } else {
-    document.getElementById("conteudo-do-dia").innerHTML = naoEncontrado({
+    document.getElementById("conteudo-do-dia").innerHTML = mensagemDeNaoEncontrado({
       titulo: `Dia ${numeroEscritoNaUrl} não encontrado`, voltar: { para: enderecos.novena(novenaId), texto: "Voltar à novena" },
     });
   }
@@ -237,17 +243,17 @@ function desenharNovena() {
 
 async function carregarNovena() {
   if (novenaId === null) {
-    paginaDaNovena.innerHTML = naoEncontrado({ titulo: "Novena não encontrada", voltar: voltarParaNovenas });
+    paginaDaNovena.innerHTML = mensagemDeNaoEncontrado({ titulo: "Novena não encontrada", voltar: voltarParaNovenas });
     return;
   }
-  paginaDaNovena.innerHTML = montarMigalhas() + carregando({ tipo: "texto", quantidade: 4, texto: "Carregando a novena…" });
+  paginaDaNovena.innerHTML = montarCaminhoDeNavegacao() + carregando({ tipo: "texto", quantidade: 4, texto: "Carregando a novena…" });
   const resultado = await criarConsulta()((signal) => servicoNovenas.detalharNovena(novenaId, { signal }));
   if (resultado.estado === "erro") {
     if (ehErroDeNaoEncontrado(resultado.erro)) {
-      paginaDaNovena.innerHTML = naoEncontrado({ titulo: "Novena não encontrada", voltar: voltarParaNovenas });
+      paginaDaNovena.innerHTML = mensagemDeNaoEncontrado({ titulo: "Novena não encontrada", voltar: voltarParaNovenas });
       return;
     }
-    paginaDaNovena.innerHTML = montarMigalhas() + estadoErro({ erro: resultado.erro, conteudoBuscado: "esta novena" });
+    paginaDaNovena.innerHTML = montarCaminhoDeNavegacao() + mensagemDeErro({ erro: resultado.erro, conteudoBuscado: "esta novena" });
     ligarTentarNovamente(paginaDaNovena, carregarNovena);
     return;
   }

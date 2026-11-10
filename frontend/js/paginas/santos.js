@@ -7,7 +7,7 @@ import { lerParametrosDaUrl, atualizarParametrosDaUrl, aoMudarParametrosDaUrl } 
 import { lerNumeroDaPagina } from "../utils/paginacao.js";
 import { escaparHtml } from "../componentes/html.js";
 import {
-  botao, cardSanto, carregando, estadoErro, estadoVazio, ligarPaginacao, ligarTentarNovamente, paginacao,
+  botao, cardDoSanto, carregando, mensagemDeErro, mensagemDeListaVazia, ligarPaginacao, ligarTentarNovamente, paginacao,
 } from "../componentes/componentes.js";
 
 montarLayout();
@@ -57,7 +57,7 @@ async function carregarSantos() {
   const nomeBuscado = parametrosDaUrl.get("nome") ?? "";
   const pagina = lerNumeroDaPagina(parametrosDaUrl.get("pagina"));
 
-  // primeiro mostra os esqueletos; depois troca pelo resultado
+  // primeiro mostra os blocos de carregamento; depois troca pelo resultado
   areaDosResultados.setAttribute("aria-busy", "true");
   areaDosResultados.innerHTML = carregando({ tipo: "santos", quantidade: 3, texto: "Carregando santos…" });
   const resultado = await consultarSantos(
@@ -68,10 +68,10 @@ async function carregarSantos() {
   areaDosResultados.setAttribute("aria-busy", "false");
 
   if (resultado.estado === "erro") {
-    areaDosResultados.innerHTML = estadoErro({ erro: resultado.erro, conteudoBuscado: "os santos" });
+    areaDosResultados.innerHTML = mensagemDeErro({ erro: resultado.erro, conteudoBuscado: "os santos" });
     ligarTentarNovamente(areaDosResultados, carregarSantos);
   } else if (resultado.estado === "vazio") {
-    areaDosResultados.innerHTML = estadoVazio({
+    areaDosResultados.innerHTML = mensagemDeListaVazia({
       titulo: nomeBuscado ? `Nenhum santo encontrado para “${nomeBuscado}”` : "Nenhum santo cadastrado",
       texto: nomeBuscado ? "Confira a grafia ou veja todos os santos." : null,
       acao: nomeBuscado ? botao({ variante: "secundario", icone: "fechar", texto: "Limpar busca", atributos: "data-limpar-resultado" }) : null,
@@ -81,8 +81,8 @@ async function carregarSantos() {
     const paginaDeSantos = resultado.dados;
     const totalDeSantos = paginaDeSantos.total_registros_filtros;
     areaDosResultados.innerHTML =
-      `<p class="fd-aux" role="status" style="margin-bottom:16px">${totalDeSantos} ${totalDeSantos === 1 ? "santo" : "santos"}${nomeBuscado ? ` para “${escaparHtml(nomeBuscado)}”` : ""}</p>`
-      + `<div class="fd-grade fd-grade--3">${paginaDeSantos.itens.map((santo) => cardSanto(santo, 2)).join("")}</div>`
+      `<p class="texto-auxiliar" role="status" style="margin-bottom:16px">${totalDeSantos} ${totalDeSantos === 1 ? "santo" : "santos"}${nomeBuscado ? ` para “${escaparHtml(nomeBuscado)}”` : ""}</p>`
+      + `<div class="grade grade-de-3-colunas">${paginaDeSantos.itens.map((santo) => cardDoSanto(santo, 2)).join("")}</div>`
       + paginacao({ pagina: paginaDeSantos.pagina, totalPaginas: paginaDeSantos.total_paginas, totalRegistros: totalDeSantos, rotulo: "Páginas de santos" });
     ligarPaginacao(areaDosResultados, irParaPagina);
   }

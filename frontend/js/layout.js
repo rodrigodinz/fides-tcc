@@ -1,4 +1,4 @@
-// Moldura comum a todas as páginas: navbar, menu lateral (drawer), rodapé, avisos rápidos (toast)
+// Moldura comum a todas as páginas: navbar, menu lateral, rodapé, avisos rápidos (toast)
 // e janela de confirmação. Cada página HTML chama montarLayout() logo no começo do seu script.
 import { icone } from "./componentes/icones.js";
 import { ornamento, retratoIndisponivel } from "./componentes/componentes.js";
@@ -18,43 +18,43 @@ export const Modulos = [
 ];
 
 // aria-current="page" marca o link da página atual (o CSS usa isso para sublinhar o link)
-const marcarAtual = (modulo, moduloAtual) => (modulo.chave === moduloAtual ? ' aria-current="page" class="active"' : "");
+const marcarLinkDaPaginaAtual = (modulo, moduloAtual) => (modulo.chave === moduloAtual ? ' aria-current="page"' : "");
 
 function montarNavbar(moduloAtual) {
   const linksDaNavbar = Modulos.filter((modulo) => modulo.aparecerNaNavbar).map((modulo) =>
-    `<li><a class="fd-navbar__link${modulo.chave === moduloAtual ? " active" : ""}"${modulo.chave === moduloAtual ? ' aria-current="page"' : ""} href="${modulo.endereco}">${modulo.nome}</a></li>`).join("");
-  return `<header class="fd-navbar"><div class="fd-navbar__inner">`
-    + `<a class="fd-navbar__simbolo" aria-label="Fides — página inicial" href="/"><img src="/imagens/simbolo-fides.svg" alt="" width="34" height="46"></a>`
-    + `<a class="fd-navbar__nome" aria-hidden="true" tabindex="-1" href="/">FIDES</a>`
-    + `<div class="fd-navbar__direita"><nav aria-label="Principal"><ul class="fd-navbar__links">${linksDaNavbar}</ul></nav>`
-    + `<button type="button" class="fd-botao-icone" aria-label="Abrir menu" aria-expanded="false" aria-controls="fd-menu">${icone("menu")}</button>`
+    `<li><a class="link-da-navbar"${modulo.chave === moduloAtual ? ' aria-current="page"' : ""} href="${modulo.endereco}">${modulo.nome}</a></li>`).join("");
+  return `<header class="navbar"><div class="conteudo-da-navbar">`
+    + `<a class="simbolo-da-navbar" aria-label="Fides — página inicial" href="/"><img src="/imagens/simbolo-fides.svg" alt="" width="34" height="46"></a>`
+    + `<a class="nome-fides-na-navbar" aria-hidden="true" tabindex="-1" href="/">FIDES</a>`
+    + `<div class="lado-direito-da-navbar"><nav aria-label="Principal"><ul class="links-da-navbar">${linksDaNavbar}</ul></nav>`
+    + `<button type="button" class="botao-de-icone" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu-lateral">${icone("menu")}</button>`
     + "</div></div></header>";
 }
 
-function montarDrawer(moduloAtual) {
+function montarMenuLateral(moduloAtual) {
   const linksDoMenu = Modulos.map((modulo) =>
-    `<li><a${marcarAtual(modulo, moduloAtual)} href="${modulo.endereco}">${icone(modulo.icone, { tamanho: 24 })}${modulo.nome}</a></li>`).join("");
-  return `<aside id="fd-menu" class="fd-drawer" role="dialog" aria-modal="true" aria-label="Menu" aria-hidden="true">`
-    + `<div class="fd-drawer__topo">${ornamento("curto")}<button type="button" class="fd-botao-icone" aria-label="Fechar menu">${icone("fechar")}</button></div>`
-    + `<nav class="fd-drawer__nav" aria-label="Módulos"><ul>${linksDoMenu}</ul></nav>`
-    + '<div class="fd-drawer__inst"><h2>Sobre o Fides</h2>'
+    `<li><a${marcarLinkDaPaginaAtual(modulo, moduloAtual)} href="${modulo.endereco}">${icone(modulo.icone, { tamanho: 24 })}${modulo.nome}</a></li>`).join("");
+  return `<aside id="menu-lateral" class="menu-lateral" role="dialog" aria-modal="true" aria-label="Menu" aria-hidden="true">`
+    + `<div class="topo-do-menu-lateral">${ornamento("curto")}<button type="button" class="botao-de-icone" aria-label="Fechar menu">${icone("fechar")}</button></div>`
+    + `<nav class="links-do-menu-lateral" aria-label="Módulos"><ul>${linksDoMenu}</ul></nav>`
+    + '<div class="sobre-o-fides-no-menu-lateral"><h2>Sobre o Fides</h2>'
     + "<p>Plataforma de conteúdo e práticas católicas: santos, orações, novenas, livros e liturgia reunidos em um só lugar.</p>"
     + "<p>Trabalho de Conclusão de Curso · versão MVP. A liturgia desta versão é conteúdo de demonstração.</p></div></aside>";
 }
 
 function montarRodape() {
   const linksDoRodape = Modulos.map((modulo) => `<li><a href="${modulo.endereco}">${modulo.nome}</a></li>`).join("");
-  return '<footer class="fd-rodape"><div class="fd-rodape__nav fd-escuro"><div class="fd-container fd-rodape__nav-inner">'
-    + '<a class="fd-rodape__marca" href="/"><img src="/imagens/simbolo-fides.svg" alt="" width="30" height="40">FIDES</a>'
+  return '<footer class="rodape"><div class="faixa-azul-do-rodape"><div class="area-centralizada conteudo-da-faixa-azul-do-rodape">'
+    + '<a class="marca-fides-no-rodape" href="/"><img src="/imagens/simbolo-fides.svg" alt="" width="30" height="40">FIDES</a>'
     + `<nav aria-label="Rodapé"><ul>${linksDoRodape}</ul></nav></div></div>`
-    + '<div class="fd-container fd-rodape__creditos"><span>Fides · Plataforma Integrada de Conteúdo e Práticas Católicas · Trabalho de Conclusão de Curso</span>'
+    + '<div class="area-centralizada creditos-do-rodape"><span>Fides · Plataforma Integrada de Conteúdo e Práticas Católicas · Trabalho de Conclusão de Curso</span>'
     + "<span>Liturgia em conteúdo de demonstração: não é o texto oficial.</span></div></footer>";
 }
 
 // ---------------------------------------------------------------- foco preso (acessibilidade)
 const Seletor_De_Elementos_Focaveis = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-// com Tab, o foco gira só dentro do menu/modal aberto
+// com Tab, o foco gira só dentro do menu ou da janela de confirmação aberta
 function prenderFocoNoContainer(eventoDeTeclado, container) {
   if (eventoDeTeclado.key !== "Tab" || !container) return;
   const elementosFocaveis = [...container.querySelectorAll(Seletor_De_Elementos_Focaveis)]
@@ -73,9 +73,9 @@ function prenderFocoNoContainer(eventoDeTeclado, container) {
 
 // ---------------------------------------------------------------- menu lateral
 function ligarMenuLateral(estadoDoLayout) {
-  const botaoAbrir = document.querySelector('.fd-navbar button[aria-controls="fd-menu"]');
-  const menu = document.getElementById("fd-menu");
-  const veu = document.querySelector(".fd-veu");
+  const botaoAbrir = document.querySelector('.navbar button[aria-controls="menu-lateral"]');
+  const menu = document.getElementById("menu-lateral");
+  const veuAtrasDoMenu = document.querySelector(".veu-atras-do-menu");
   const botaoFechar = menu.querySelector('button[aria-label="Fechar menu"]');
 
   const aoPressionarTecla = (evento) => {
@@ -84,28 +84,28 @@ function ligarMenuLateral(estadoDoLayout) {
   };
   function abrirMenu() {
     estadoDoLayout.menuAberto = true;
-    menu.classList.add("is-aberto");
-    veu.classList.add("is-aberto");
+    menu.classList.add("menu-lateral-quando-aberto");
+    veuAtrasDoMenu.classList.add("veu-quando-aberto");
     menu.setAttribute("aria-hidden", "false");
     botaoAbrir.setAttribute("aria-expanded", "true");
-    document.body.classList.add("fd-sem-rolagem");  // trava a rolagem da página atrás do menu
+    document.body.classList.add("pagina-sem-rolagem");  // trava a rolagem da página atrás do menu
     document.addEventListener("keydown", aoPressionarTecla);
     estadoDoLayout.mostrarNavbar();
     setTimeout(() => botaoFechar.focus(), 30);
   }
   function fecharMenu() {
     estadoDoLayout.menuAberto = false;
-    menu.classList.remove("is-aberto");
-    veu.classList.remove("is-aberto");
+    menu.classList.remove("menu-lateral-quando-aberto");
+    veuAtrasDoMenu.classList.remove("veu-quando-aberto");
     menu.setAttribute("aria-hidden", "true");
     botaoAbrir.setAttribute("aria-expanded", "false");
-    document.body.classList.remove("fd-sem-rolagem");
+    document.body.classList.remove("pagina-sem-rolagem");
     document.removeEventListener("keydown", aoPressionarTecla);
     setTimeout(() => botaoAbrir.focus(), 0);  // devolve o foco ao botão que abriu o menu
   }
   botaoAbrir.addEventListener("click", abrirMenu);
   botaoFechar.addEventListener("click", fecharMenu);
-  veu.addEventListener("click", fecharMenu);
+  veuAtrasDoMenu.addEventListener("click", fecharMenu);
 }
 
 // ---------------------------------------------------------------- navbar que some ao rolar
@@ -114,12 +114,12 @@ export const Altura_Da_Zona_Do_Topo = 16;
 
 // esconde a navbar quando a pessoa rola para baixo e mostra de novo ao rolar para cima
 function ligarNavbarQueSome(estadoDoLayout) {
-  const navbar = document.querySelector(".fd-navbar");
+  const navbar = document.querySelector(".navbar");
   let focoDentroDaNavbar = false;
   let ultimaPosicao = window.scrollY;
   let distanciaAcumulada = 0;
   let atualizacaoAgendada = false;
-  const definirEscondida = (escondida) => navbar.classList.toggle("is-escondida", escondida);
+  const definirEscondida = (escondida) => navbar.classList.toggle("navbar-quando-escondida", escondida);
   estadoDoLayout.mostrarNavbar = () => { distanciaAcumulada = 0; definirEscondida(false); };
 
   navbar.addEventListener("focusin", () => { focoDentroDaNavbar = true; definirEscondida(false); });
@@ -150,42 +150,42 @@ const Tempo_Do_Aviso_Na_Tela = 3200;
 
 // mostra um aviso no canto da tela que some sozinho; aria-live faz o leitor de tela ler o aviso
 export function avisar(texto) {
-  const areaDosAvisos = document.querySelector(".fd-toasts");
-  const aviso = criarElemento(`<div class="fd-toast">${icone("check")}${escaparHtml(texto)}</div>`);
+  const areaDosAvisos = document.querySelector(".area-dos-avisos-rapidos");
+  const aviso = criarElemento(`<div class="aviso-rapido">${icone("check")}${escaparHtml(texto)}</div>`);
   areaDosAvisos.append(aviso);
   while (areaDosAvisos.children.length > 3) areaDosAvisos.firstElementChild.remove();  // no máximo 3 na tela
   setTimeout(() => aviso.remove(), Tempo_Do_Aviso_Na_Tela);
 }
 
 // ---------------------------------------------------------------- janela de confirmação
-// Abre o modal e devolve uma Promise: true se a pessoa confirmou, false se cancelou.
-// Esc cancela, clicar fora cancela e o foco fica preso dentro do modal enquanto ele está aberto.
+// Abre a janela de confirmação e devolve uma Promise: true se a pessoa confirmou, false se cancelou.
+// Esc cancela, clicar fora cancela e o foco fica preso dentro da janela enquanto ela está aberta.
 export function pedirConfirmacao({ titulo, texto, textoConfirmar = "Confirmar", textoCancelar = "Cancelar" }) {
   return new Promise((resolver) => {
     const elementoFocadoAntes = document.activeElement;
-    const veuDoModal = criarElemento(
-      '<div class="fd-modal-veu"><div class="fd-modal" role="alertdialog" aria-modal="true" aria-labelledby="fd-modal-titulo" aria-describedby="fd-modal-texto">'
-      + `<h2 id="fd-modal-titulo" class="fd-h4">${escaparHtml(titulo)}</h2>`
-      + `<div id="fd-modal-texto" style="margin-top:8px"><p>${escaparHtml(texto)}</p></div>`
-      + `<div class="fd-modal__acoes"><button type="button" class="fd-btn fd-btn--secundario" data-resposta="nao">${escaparHtml(textoCancelar)}</button>`
-      + `<button type="button" class="fd-btn fd-btn--especial" data-resposta="sim">${escaparHtml(textoConfirmar)}</button></div></div></div>`);
-    const modal = veuDoModal.querySelector(".fd-modal");
+    const fundoDaJanela = criarElemento(
+      '<div class="fundo-da-janela-de-confirmacao"><div class="janela-de-confirmacao" role="alertdialog" aria-modal="true" aria-labelledby="titulo-da-janela-de-confirmacao" aria-describedby="texto-da-janela-de-confirmacao">'
+      + `<h2 id="titulo-da-janela-de-confirmacao" class="subtitulo-menor">${escaparHtml(titulo)}</h2>`
+      + `<div id="texto-da-janela-de-confirmacao" style="margin-top:8px"><p>${escaparHtml(texto)}</p></div>`
+      + `<div class="botoes-da-janela-de-confirmacao"><button type="button" class="botao botao-secundario" data-resposta="nao">${escaparHtml(textoCancelar)}</button>`
+      + `<button type="button" class="botao botao-especial" data-resposta="sim">${escaparHtml(textoConfirmar)}</button></div></div></div>`);
+    const janelaDeConfirmacao = fundoDaJanela.querySelector(".janela-de-confirmacao");
     const responder = (confirmou) => {
       document.removeEventListener("keydown", aoPressionarTecla);
-      veuDoModal.remove();
+      fundoDaJanela.remove();
       elementoFocadoAntes?.focus?.();
       resolver(confirmou);
     };
     const aoPressionarTecla = (evento) => {
       if (evento.key === "Escape") responder(false);
-      else prenderFocoNoContainer(evento, modal);
+      else prenderFocoNoContainer(evento, janelaDeConfirmacao);
     };
-    veuDoModal.addEventListener("click", (evento) => { if (evento.target === veuDoModal) responder(false); });
-    veuDoModal.querySelector('[data-resposta="nao"]').addEventListener("click", () => responder(false));
-    veuDoModal.querySelector('[data-resposta="sim"]').addEventListener("click", () => responder(true));
+    fundoDaJanela.addEventListener("click", (evento) => { if (evento.target === fundoDaJanela) responder(false); });
+    fundoDaJanela.querySelector('[data-resposta="nao"]').addEventListener("click", () => responder(false));
+    fundoDaJanela.querySelector('[data-resposta="sim"]').addEventListener("click", () => responder(true));
     document.addEventListener("keydown", aoPressionarTecla);
-    document.body.append(veuDoModal);
-    veuDoModal.querySelector('[data-resposta="nao"]').focus();
+    document.body.append(fundoDaJanela);
+    fundoDaJanela.querySelector('[data-resposta="nao"]').focus();
   });
 }
 
@@ -208,9 +208,9 @@ export function montarLayout() {
   const moduloAtual = document.body.dataset.modulo;
   const conteudoPrincipal = document.getElementById("conteudo");
   const estadoDoLayout = { menuAberto: false, mostrarNavbar: () => {} };
-  conteudoPrincipal.insertAdjacentHTML("beforebegin", montarNavbar(moduloAtual) + '<div class="fd-veu" aria-hidden="true"></div>' + montarDrawer(moduloAtual));
+  conteudoPrincipal.insertAdjacentHTML("beforebegin", montarNavbar(moduloAtual) + '<div class="veu-atras-do-menu" aria-hidden="true"></div>' + montarMenuLateral(moduloAtual));
   conteudoPrincipal.insertAdjacentHTML("afterend", montarRodape());
-  document.querySelector(".fd-app").insertAdjacentHTML("afterend", '<div class="fd-toasts" role="status" aria-live="polite"></div>');
+  document.querySelector(".estrutura-do-site").insertAdjacentHTML("afterend", '<div class="area-dos-avisos-rapidos" role="status" aria-live="polite"></div>');
   ligarNavbarQueSome(estadoDoLayout);
   ligarMenuLateral(estadoDoLayout);
   document.addEventListener("error", tratarImagemQuebrada, true);

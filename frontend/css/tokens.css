@@ -3,11 +3,11 @@
   --branco: #FFFFFF;
   --pergaminho: #EEE8DC;
   --pergaminho-escuro: #E6DECD;
-  --linha: #E2D8C4;
+  --cor-das-linhas: #E2D8C4;
   --azul-profundo: #171A4A;
-  --azul-hover: #24286A;
+  --azul-ao-passar-o-mouse: #24286A;
   --vinho: #56070C;
-  --vinho-hover: #6E0F15;
+  --vinho-ao-passar-o-mouse: #6E0F15;
   --dourado: #C6A15B;
   --dourado-funcional: #8A6A2E;
   --dourado-texto: #7A5C24;
@@ -17,15 +17,15 @@
   --chumbo: #6E6A72;
   --verde-profundo: #002A18;
   --creme: #F3E9D2;
-  --desabilitado: #9A968F;
-  --erro-tinta: #8E1B1B;
-  --erro-fundo: #F6E7E4;
-  --erro-borda: #B4564C;
-  --aviso-tinta: #6E4A0E;
-  --aviso-fundo: #F6EBD3;
-  --sucesso-fundo: #E4EEE6;
-  --info-fundo: #E8E9F2;
-  --veu: rgba(23, 26, 74, 0.38);
+  --cor-desabilitada: #9A968F;
+  --cor-do-texto-de-erro: #8E1B1B;
+  --cor-de-fundo-de-erro: #F6E7E4;
+  --cor-da-borda-de-erro: #B4564C;
+  --cor-do-texto-de-aviso: #6E4A0E;
+  --cor-de-fundo-de-aviso: #F6EBD3;
+  --cor-de-fundo-de-sucesso: #E4EEE6;
+  --cor-de-fundo-de-informacao: #E8E9F2;
+  --cor-do-veu: rgba(23, 26, 74, 0.38);
   --espaco-1: 4px;
   --espaco-2: 8px;
   --espaco-3: 12px;
@@ -36,31 +36,41 @@
   --espaco-8: 56px;
   --espaco-9: 72px;
   --espaco-10: 96px;
-  --raio-botao: 4px;
-  --raio-card: 6px;
-  --raio-circulo: 50%;
-  --sombra-card: 0 1px 2px rgba(23, 26, 74, 0.06);
-  --sombra-card-hover: 0 10px 24px -12px rgba(23, 26, 74, 0.30), 0 2px 4px rgba(23, 26, 74, 0.06);
-  --sombra-drawer: -16px 0 40px -16px rgba(23, 26, 74, 0.32);
-  --sombra-toast: 0 12px 28px -14px rgba(23, 26, 74, 0.40);
-  --largura-conteudo: 1120px;
-  --largura-leitura: 33rem;
-  --altura-navbar: 72px;
-  --altura-navbar-recolhida: 6px;
-  --largura-drawer: 380px;
-  --largura-margem-ornamental: 48px;
-  --duracao-rapida: 120ms;
-  --duracao-base: 180ms;
-  --duracao-painel: 320ms;
-  --curva-suave: cubic-bezier(0.22, 0.61, 0.36, 1);
-  --z-navbar: 100;
-  --z-veu: 290;
-  --z-drawer: 300;
-  --z-toast: 400;
-  --font-serif: "Cormorant Garamond", Garamond, "Times New Roman", serif;
-  --font-sans: Antic, Optima, Candara, "Segoe UI", sans-serif;
-  --altura-navbar-celular: 60px;
-  --gutter: var(--espaco-4);
+  --arredondamento-dos-botoes: 4px;
+  --arredondamento-dos-cards: 6px;
+  --arredondamento-circular: 50%;
+  --sombra-do-card: 0 1px 2px rgba(23, 26, 74, 0.06);
+  --sombra-do-card-ao-passar-o-mouse: 0 10px 24px -12px rgba(23, 26, 74, 0.30), 0 2px 4px rgba(23, 26, 74, 0.06);
+  --sombra-do-menu-lateral: -16px 0 40px -16px rgba(23, 26, 74, 0.32);
+  --sombra-dos-avisos-rapidos: 0 12px 28px -14px rgba(23, 26, 74, 0.40);
+  --largura-do-conteudo: 1120px;
+  --largura-de-leitura: 33rem;
+  --altura-da-navbar: 72px;
+  --altura-da-navbar-recolhida: 6px;
+  --largura-do-menu-lateral: 380px;
+  --largura-do-trilho-ornamental: 48px;
+  --duracao-rapida-da-animacao: 120ms;
+  --duracao-normal-da-animacao: 180ms;
+  --duracao-da-animacao-do-menu: 320ms;
+  --curva-suave-da-animacao: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --camada-da-navbar: 100;
+  --camada-do-veu: 290;
+  --camada-do-menu-lateral: 300;
+  --camada-dos-avisos-rapidos: 400;
+  --fonte-com-serifa: "Cormorant Garamond", Garamond, "Times New Roman", serif;
+  --fonte-sem-serifa: Antic, Optima, Candara, "Segoe UI", sans-serif;
+  --altura-da-navbar-no-celular: 60px;
+  --margem-lateral-da-pagina: var(--espaco-4);
 }
-@media (min-width: 768px) { :root { --gutter: var(--espaco-5); } }
-@media (min-width: 1024px) { :root { --gutter: var(--espaco-7); } }
+
+@media (min-width: 768px) {
+  :root {
+    --margem-lateral-da-pagina: var(--espaco-5);
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --margem-lateral-da-pagina: var(--espaco-7);
+  }
+}
