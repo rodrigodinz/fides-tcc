@@ -1,5 +1,4 @@
-// Página da novena: novena.html?id=1 (abre no dia atual da agenda) ou novena.html?id=1&dia=3.
-// Faz duas buscas em paralelo: o detalhe da novena e o calendário dos nove dias.
+// Página da novena (novena.html?id=1 para o dia atual (O id é 1) ou novena.html?id=1&dia=3 para o dia 3, e assim por diante)
 import { montarLayout, definirTitulo, avisar, pedirConfirmacao } from "../layout.js";
 import { servicoNovenas } from "../api/servicos.js";
 import { ehErroDeNaoEncontrado } from "../api/erros.js";
@@ -31,21 +30,21 @@ const voltarParaNovenas = { para: enderecos.novenas(), texto: "Voltar às novena
 let novena = null;
 let numeroDoDia = null;
 let diasDaNovena = null;  // resposta de GET /novenas/{id}/dias
-let dadosPessoais = { marcados: [], pedidos: "" };  // o que a pessoa guardou neste aparelho
+let dadosPessoais = { marcados: [], pedidos: "" };
 let falhouAoGravar = false;
 
 const montarCaminhoDeNavegacao = (tituloDaNovena) => caminhoDeNavegacao([
   { texto: "Início", para: enderecos.inicio() }, { texto: "Novenas", para: enderecos.novenas() }, { texto: tituloDaNovena ?? "Novena" },
 ]);
 
-// ---------------------------------------------------------------- quadro da agenda
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+- quadro da agenda +-+-+-+-+-+-+-+-+-+-+-+-+-+-
 const Classes_Das_Situacoes = {
   em_andamento: "situacao-em-andamento",
   agendada: "situacao-agendada",
   sem_agenda: "situacao-sem-agenda",
 };
 
-// situação (em andamento / agendada / não agendada), período e o "Dia X de 9"
+// situação (em andamento, agendada ou não agendada) da novena, o período e o dia X de 9
 function desenharAgendaDaNovena() {
   const situacaoDaAgenda = descreverAgendaDaNovena(novena.agenda, novena.total_dias);
   const agenda = novena.agenda;
@@ -64,7 +63,8 @@ function desenharAgendaDaNovena() {
     + `${destaqueDoDia}</div><p class="texto-auxiliar" style="margin-top:12px">${explicacao}</p></section>`;
 }
 
-// ---------------------------------------------------------------- calendário dos nove dias
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+- calendário dos nove dias +-+-+-+-+-+-+-+-+-+-+-+-+-+-
+// A Alexandra deu a ideia de fazer por uma API externa, mas deixa isso pra fase 2, por enquanto eu achei essa forma de fazer um calendário por js mesmo K
 function desenharCalendario() {
   const areaDoCalendario = document.getElementById("calendario-da-novena");
   areaDoCalendario.innerHTML = '<section aria-labelledby="titulo-do-calendario"><h2 id="titulo-do-calendario" class="subtitulo">Os nove dias</h2>'
@@ -89,8 +89,8 @@ async function carregarCalendario() {
   desenharCalendario();
 }
 
-// ---------------------------------------------------------------- conteúdo do dia
-// reflexão e orações do dia escolhido (GET /novenas/{id}/dias/{n})
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+- conteúdo do dia +-+-+-+-+-+-+-+-+-+-+-+-+-+-
+// reflexão e orações do dia (GET /novenas/{id}/dias/{n})
 async function carregarConteudoDoDia() {
   const areaDoDia = document.getElementById("conteudo-do-dia");
   areaDoDia.innerHTML = carregando({ tipo: "texto", quantidade: 5, texto: `Carregando o dia ${numeroDoDia}…` });
@@ -105,7 +105,7 @@ async function carregarConteudoDoDia() {
     return;
   }
   const diaDaNovena = resultado.dados;
-  // <details>: caixa que abre e fecha sozinha, sem JavaScript; a primeira oração já vem aberta
+  // <details> (caixa que abre e fecha sozinha)
   const oracoesDoDia = diaDaNovena.oracoes.length === 0
     ? '<p class="texto-auxiliar">Nenhuma oração base cadastrada para este dia.</p>'
     : diaDaNovena.oracoes.map((oracao, posicao) =>
@@ -126,9 +126,8 @@ async function carregarConteudoDoDia() {
     + "</article>";
 }
 
-// ---------------------------------------------------------------- neste dispositivo
-// Parte pessoal: marcar dia rezado e escrever pedidos. Tudo fica só no navegador (localStorage);
-// não vai para a API e não muda o dia da agenda, que é igual para todos.
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+- neste dispositivo +-+-+-+-+-+-+-+-+-+-+-+-+-+-
+// Parte pessoal (marca o dia da novena que já foi rezado e escreve os pedidos, esse conteúdo inclusive fica só no navegador (localStorage)
 function guardarNoDispositivo(novosDados) {
   const { gravou, dados } = salvarNovenaPessoal(novenaId, novosDados, novena.total_dias);
   dadosPessoais = dados;
@@ -175,7 +174,7 @@ function ligarNesteDispositivo(area) {
   const contador = area.querySelector("[data-contador]");
   const botaoGuardar = area.querySelector('[data-chave="guardar"]');
   const pedidosForamAlterados = () => campoDosPedidos.value !== dadosPessoais.pedidos;
-  // junta o que já está guardado com o texto que está no campo agora (mesmo se ainda não foi guardado)
+  // junta o que já está guardado com o texto que está no campo agora
   const dadosComPedidosDigitados = () => ({ ...dadosPessoais, pedidos: campoDosPedidos.value });
 
   caixaRezei.addEventListener("change", () => {
@@ -184,7 +183,7 @@ function ligarNesteDispositivo(area) {
       avisar(diaEstavaMarcado ? `Marcação do dia ${numeroDoDia} removida.` : `Dia ${numeroDoDia} marcado como rezado neste dispositivo.`);
     }
   });
-  // enquanto digita, só atualiza o contador e o botão (sem redesenhar, para não perder o cursor)
+  // enquanto digita, só atualiza o contador e o botão
   campoDosPedidos.addEventListener("input", () => {
     contador.textContent = `${campoDosPedidos.value.length}/${Limite_De_Caracteres_Dos_Pedidos} caracteres`;
     botaoGuardar.disabled = !pedidosForamAlterados();
@@ -193,7 +192,6 @@ function ligarNesteDispositivo(area) {
     if (guardarNoDispositivo(dadosComPedidosDigitados())) avisar("Pedidos guardados neste dispositivo.");
   };
   // ao sair do campo, guarda automaticamente se mudou
-  // (se a pessoa clicou em outro controle desta área, quem guarda é o próprio controle)
   campoDosPedidos.addEventListener("blur", (evento) => {
     if (pedidosForamAlterados() && !area.contains(evento.relatedTarget)) guardarPedidos();
   });
@@ -215,7 +213,7 @@ function ligarNesteDispositivo(area) {
   });
 }
 
-// ---------------------------------------------------------------- montagem da página
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+- montagem da página +-+-+-+-+-+-+-+-+-+-+-+-+-+-
 const numeroDoDiaValido = () => numeroDoDia !== null && numeroDoDia >= 1 && numeroDoDia <= novena.total_dias;
 
 function desenharNovena() {
@@ -259,7 +257,7 @@ async function carregarNovena() {
   }
   novena = resultado.dados;
   definirTitulo(novena.titulo);
-  // sem ?dia= na URL, abre no dia atual da agenda (ou no dia 1)
+  // sem ?dia= na URL abre no dia atual da agenda (ou no dia 1)
   numeroDoDia = numeroDoDiaNaUrl ?? escolherDiaInicial(novena.agenda, novena.total_dias);
   dadosPessoais = lerNovenaPessoal(novenaId, novena.total_dias);
   desenharNovena();

@@ -9,7 +9,7 @@ from .liturgia import HoraDaLiturgia, LeiturasDoDia, PeriodoDaLiturgia
 SituacaoDaNovena = Literal["em_andamento", "agendada"]  # Literal: só aceita esses dois textos
 
 
-# progresso global da novena: é igual para todos os usuários
+# progresso global da novena → é igual para todos os usuários
 class AgendaDaNovena(BaseModel):
     id: int
     data_inicio: date = Field(description="Data do dia 1 da novena.")
@@ -33,7 +33,7 @@ class NovenaEmAndamento(BaseModel):
     total_dias: int
 
 
-# tudo o que a agenda reserva para uma data: liturgia + novenas em andamento
+# tudo o que a agenda reserva para uma data (liturgia + novenas em andamento)
 class ConteudosDoDia(BaseModel):
     data: date
     periodo: PeriodoDaLiturgia

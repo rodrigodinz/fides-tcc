@@ -17,7 +17,7 @@ export function listarSantosAcessados() {
   return idsValidos;
 }
 
-// guarda os últimos 20 santos visitados; é com eles que o site recomenda livros
+// guarda os últimos 20 santos visitados
 export function registrarSantoAcessado(santoIdRecebido) {
   const santoId = Number(santoIdRecebido);
   if (!ehIdValido(santoId)) return listarSantosAcessados();

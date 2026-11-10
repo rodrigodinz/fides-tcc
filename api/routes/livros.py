@@ -12,8 +12,6 @@ from ..schemas.livros import DetalhesDoLivro, ResumoDoLivro
 from ..services import livros as servico
 from ..services.paginacao import Paginacao
 
-# APIRouter agrupa as rotas deste módulo: prefix entra antes de cada caminho, tags agrupa no /docs
-# e responses documenta os erros padrão (400, 404, 422...) no OpenAPI
 router = APIRouter(prefix="/livros", tags=["Livros"], responses=Respostas_De_Erro)
 # Depends(get_session): o FastAPI abre uma sessão do banco por requisição e fecha no final
 Sessao = Annotated[Session, Depends(get_session)]

@@ -27,7 +27,7 @@ class RespostaLiturgiaDasHoras(BaseModel):
     aviso: str
 
 
-# só as leituras; é reaproveitado na resposta da agenda
+# só as leituras
 class LeiturasDoDia(BaseModel):
     santo_celebrado: str | None = None
     primeira_leitura: str | None = None

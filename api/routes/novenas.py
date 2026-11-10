@@ -12,10 +12,7 @@ from ..schemas.novenas import ConteudoNovena, DetalhesDoDiaDaNovena, DiasDaNoven
 from ..services import novenas as servico
 from ..services.paginacao import Paginacao
 
-# APIRouter agrupa as rotas deste módulo: prefix entra antes de cada caminho, tags agrupa no /docs
-# e responses documenta os erros padrão (400, 404, 422...) no OpenAPI
 router = APIRouter(prefix="/novenas", tags=["Novenas"], responses=Respostas_De_Erro)
-# Depends(get_session): o FastAPI abre uma sessão do banco por requisição e fecha no final
 Sessao = Annotated[Session, Depends(get_session)]
 IdNovena = Annotated[int, Path(ge=1)]  # id reaproveitado em todas as rotas abaixo
 

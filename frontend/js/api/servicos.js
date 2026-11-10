@@ -3,7 +3,7 @@ import { buscarJsonNaApi, Limite_Maximo_Por_Pagina } from "./cliente.js";
 const montarParametrosDePaginacao = (pagina = 1, limite = Limite_Maximo_Por_Pagina) => ({ pagina, limite });
 
 // Um objeto por módulo da API. Cada função chama uma rota do back-end;
-// as páginas só usam estas funções e nunca montam URL na mão.
+// as páginas só usam essa função e nunca monta URL na unha
 export const servicoSantos = {
   listarSantos: ({ pagina, limite, nome } = {}, opcoes) =>
     buscarJsonNaApi("/santos", { ...montarParametrosDePaginacao(pagina, limite), nome: nome?.trim() || undefined }, opcoes),
@@ -47,7 +47,7 @@ export const servicoAgenda = {
   verConteudosDoDia: (data, opcoes) => buscarJsonNaApi("/agenda", { data }, opcoes),
 };
 
-// percorre página por página até acabar; usado para encher os filtros de santo
+// corre página por página até acabar
 export async function listarTodasAsPaginas(funcaoDeListagem, filtros = {}, opcoes) {
   const todosOsItens = [];
   let pagina = 1;

@@ -7,17 +7,15 @@
   <meta name="theme-color" content="#EEE8DC">
   <link rel="icon" type="image/svg+xml" href="/imagens/simbolo-fides.svg">
   <title>Fides</title>
-  <!-- estilos: fontes, cores e medidas (tokens), base, componentes e páginas -->
+  <!-- Estilos -->
   <link rel="stylesheet" href="/css/fontes.css">
   <link rel="stylesheet" href="/css/tokens.css">
   <link rel="stylesheet" href="/css/base.css">
   <link rel="stylesheet" href="/css/componentes.css">
   <link rel="stylesheet" href="/css/paginas.css">
-  <!-- type="module": o script pode usar import/export e só roda depois que o HTML terminou de carregar -->
   <script type="module" src="/js/paginas/inicio.js"></script>
 </head>
-<!-- Página inicial (endereço /) -->
-<!-- data-modulo diz qual link do menu fica marcado como página atual -->
+<!-- PÁGINA INICIAL (endereço /) -->
 <body data-modulo="inicio">
   <div class="estrutura-do-site">
     <a href="#conteudo" class="link-pular-para-o-conteudo">Pular para o conteúdo</a>
@@ -49,7 +47,7 @@
           <li><a class="atalho-do-modulo" href="/liturgia-horas.html"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7v5l3.2 2"></path><path d="M12 2.2v1.3M12 20.5v1.3M2.2 12h1.3M20.5 12h1.3"></path></svg>Liturgia das Horas</a></li>
           </ul>
         </nav>
-        <!-- as três seções abaixo são preenchidas pelo inicio.js com dados da API -->
+        <!-- as três class/secoes são preenchidas pelo inicio.js com dados da API -->
         <section class="secao" aria-labelledby="titulo-hoje" id="secao-hoje"></section>
         <section class="secao" aria-labelledby="titulo-santos" id="secao-santos"></section>
         <section class="secao" aria-labelledby="titulo-leituras" id="secao-recomendados" hidden></section>

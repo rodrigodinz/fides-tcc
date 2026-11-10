@@ -1,11 +1,9 @@
 """Variáveis de ambiente da API (as do banco, como FIDES_DATABASE_URL e
-FIDES_SECRET_KEY, continuam sendo lidas por ``database/``):
-
-    FIDES_CORS_ORIGINS  origens extras permitidas, separadas por vírgula; só é preciso se o
+FIDES_CORS_ORIGINS  origens extras permitidas, separadas por vírgula; só é preciso se o
                         front-end for aberto em outro endereço (padrão: http://localhost:8000,http://127.0.0.1:8000)
-    FIDES_STATIC_DIR    diretório servido em /static (padrão: <raiz>/static)
-    FIDES_FRONTEND_DIR  diretório das páginas do site, servido em / (padrão: <raiz>/frontend)
-    FIDES_TIMEZONE      fuso usado para "hoje" (padrão: America/Sao_Paulo)
+FIDES_STATIC_DIR    diretório servido em /static (padrão: <raiz>/static)
+FIDES_FRONTEND_DIR  diretório das páginas do site, servido em / (padrão: <raiz>/frontend)
+FIDES_TIMEZONE      fuso usado para "hoje" (padrão: America/Sao_Paulo)
 """
 import logging
 import os

@@ -1,5 +1,4 @@
-// Livros: recomendações no topo (com base nos santos visitados neste aparelho)
-// e o catálogo completo com filtro por santo e paginação.
+// Livros (recomendações no início da seção e o catálogo completo com filtro por santo
 import { montarLayout } from "../layout.js";
 import { servicoLivros, servicoSantos, listarTodasAsPaginas } from "../api/servicos.js";
 import { criarConsulta, paginaEstaVazia } from "../utils/consulta.js";
@@ -25,7 +24,7 @@ let opcoesDeSanto = null;
 const escreverAutoriaDoLivro = (livro) =>
   [livro.autor, livro.santo?.nome && livro.santo.nome !== livro.autor ? livro.santo.nome : null].filter(Boolean).join(" · ");
 
-// recomendação de leitura: livros dos santos visitados (GET /livros/recomendados?santo_id=...)
+// recomendação de leitura (GET /livros/recomendados?santo_id=...)
 async function carregarRecomendacoes() {
   const idsDosSantosAcessados = listarSantosAcessados();
   if (idsDosSantosAcessados.length === 0) {

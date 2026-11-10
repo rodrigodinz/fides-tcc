@@ -1,4 +1,4 @@
-// Agenda do dia: novenas em andamento e liturgia de uma data (GET /agenda?data=...).
+// Agenda do dia (novenas ativas e liturgia da data (GET /agenda?data=...).
 import { montarLayout } from "../layout.js";
 import { servicoAgenda } from "../api/servicos.js";
 import { ErroDaApi } from "../api/cliente.js";

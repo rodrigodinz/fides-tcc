@@ -1,6 +1,4 @@
-// Peças visuais reaproveitadas pelas páginas. Cada função devolve um TEXTO de HTML
-// com as classes do CSS; a página junta esses textos e coloca na tela com innerHTML.
-// Textos vindos da API sempre passam por escaparHtml().
+// Peças visuais reaproveitadas pelas páginas. Cada função devolve um TEXTO de HTML com as classes do CSS; a página junta esses textos e coloca na tela com innerHTML.
 import { escaparHtml, gerarId } from "./html.js";
 import { icone } from "./icones.js";
 import { montarUrlDaImagem } from "../api/cliente.js";
@@ -12,7 +10,7 @@ import { calcularPaginasVisiveis } from "../utils/paginacao.js";
 
 const juntarClasses = (...classes) => classes.filter(Boolean).join(" ");
 
-// ---------------------------------------------------------------- ornamentos
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+- ornamentos +-+-+-+-+-+-+-+-+-+-+-+-+-+-
 const Arquivos_Dos_Ornamentos = {
   crista: "/imagens/ornamentos/crista-acanto-familia-b.svg",
   titulo: "/imagens/ornamentos/titulo-familia-b.svg",
@@ -27,13 +25,13 @@ const Classes_Dos_Ornamentos = {
   curto: "ornamento-divisor-curto",
 };
 
-// ornamentos dourados são só decoração: alt="" e aria-hidden para o leitor de tela pular
+// ornamentos dourados são só decoração
 export function ornamento(tipo = "divisor", classe = "") {
   const [largura, altura] = Dimensoes_Dos_Ornamentos[tipo];
   return `<img class="${`ornamento ${Classes_Dos_Ornamentos[tipo]} ${classe}`.trim()}" src="${Arquivos_Dos_Ornamentos[tipo]}" width="${largura}" height="${altura}" alt="" aria-hidden="true">`;
 }
 
-// ---------------------------------------------------------------- botões
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+- botões +-+-+-+-+-+-+-+-+-+-+-+-+-+-
 const Classes_Das_Variantes_Do_Botao = {
   primario: "botao-primario",
   secundario: "botao-secundario",
@@ -53,9 +51,8 @@ export function botaoLink({ texto, para, variante = "primario", icone: nomeDoIco
   return `<a class="${montarClassesDoBotao(variante, pequeno, classe)}" href="${para}">${nomeDoIcone ? icone(nomeDoIcone) : ""}${escaparHtml(texto)}${iconeDepois ? icone(iconeDepois) : ""}</a>`;
 }
 
-// ---------------------------------------------------------------- cards
-// Caixa de conteúdo usada em todo o site. destaque = card dourado; simples = sem moldura;
-// para = link do título (o card inteiro fica clicável); corpo e acoes já vêm como HTML pronto.
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+- cards +-+-+-+-+-+-+-+-+-+-+-+-+-+-
+// Destaque = card dourado, Simples = sem moldura;
 export function card({ titulo, nivel = 3, para, rotulo, meta, corpo = "", acoes, destaque, simples, classe = "" }) {
   const tagDoTitulo = `h${nivel}`;
   const tituloDoCard = titulo
@@ -71,7 +68,7 @@ export function card({ titulo, nivel = 3, para, rotulo, meta, corpo = "", acoes,
     + "</article>";
 }
 
-// foto do santo; se a imagem faltar ou não carregar, aparece o símbolo do Fides (ver tratarImagemQuebrada)
+// foto do santo. se a imagem não carregar, aparece o símbolo do Fides
 export function retratoDoSanto({ fotoUrl, nome, decorativo = false, classe = "", carregamento = "lazy" }) {
   const urlDaImagem = montarUrlDaImagem(fotoUrl);
   const conteudo = urlDaImagem
@@ -85,14 +82,14 @@ export function retratoIndisponivel(nome, decorativo) {
   return `<div class="retrato-indisponivel"${acessibilidade}><img src="/imagens/simbolo-fides.svg" alt="" width="44" height="57"><span aria-hidden="true">Retrato não disponível</span></div>`;
 }
 
-// card do santo com retrato; o link no nome cobre o card inteiro (classe link-que-cobre-o-card)
+// card do santo com a foto do santo, o link no nome cobre o card inteiro
 export function cardDoSanto(santo, nivel = 3) {
   return `<article class="card card-do-santo">${retratoDoSanto({ fotoUrl: santo.foto_url, nome: santo.nome, decorativo: true })}`
     + `<div class="corpo-do-card-do-santo"><h${nivel} class="nome-no-card-do-santo"><a class="link-que-cobre-o-card" href="${enderecos.santo(santo.id)}">${escaparHtml(santo.nome)}</a></h${nivel}>`
     + `<span class="ver-mais-no-card-do-santo" aria-hidden="true">Ver vida e devoções ${icone("direita")}</span></div></article>`;
 }
 
-// card da novena; em andamento ganha destaque e botão para ler o dia atual
+// card da novena, em andamento fica destacada e botão para ler o dia atual
 export function cardDaNovena(novena, nivel = 2) {
   const situacaoDaAgenda = descreverAgendaDaNovena(novena.agenda, novena.total_dias);
   const novenaEmAndamento = situacaoDaAgenda.tipo === "em_andamento";
@@ -110,7 +107,7 @@ export function cardDaNovena(novena, nivel = 2) {
 
 const Tamanho_De_Texto_Longo = 220;
 
-// card da oração; texto longo começa recolhido e o botão "Ler a oração inteira" abre (ver ligarCardsDeOracao)
+// card da oração
 export function cardDaOracao(oracao, nivel = 3) {
   const idDoTexto = gerarId("oracao");
   const textoLongo = oracao.texto.length > Tamanho_De_Texto_Longo;
@@ -144,7 +141,7 @@ export function ligarCardsDeOracao(container) {
   });
 }
 
-// ---------------------------------------------------------------- estados da consulta
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+- estados da consulta +-+-+-+-+-+-+-+-+-+-+-+-+-+-
 const Classes_Dos_Tipos_De_Alerta = {
   erro: "alerta-de-erro",
   aviso: "alerta-de-aviso",
@@ -162,7 +159,7 @@ export function alerta({ tipo = "info", titulo, corpo = "", acoes, papel }) {
     + "</div></div>";
 }
 
-// mensagem de erro amigável; "Tentar novamente" só aparece em erros que podem passar (rede, servidor)
+// mensagem de erro amigável, como pede a RNF, "Tentar novamente" só aparece com os erros que podem passar sem dar uma mensagem de erro diferente (como 404, 500, etc)
 // o botão tem data-acao="tentar-novamente": quem desenha o erro liga o clique com ligarTentarNovamente()
 export function mensagemDeErro({ erro, conteudoBuscado, comTentarNovamente = true, acaoExtra = "" }) {
   const { titulo, texto } = montarMensagemDeErro(erro, conteudoBuscado);
@@ -177,7 +174,7 @@ export function ligarTentarNovamente(container, funcao) {
   container.querySelectorAll('[data-acao="tentar-novamente"]').forEach((botaoTentar) => botaoTentar.addEventListener("click", funcao));
 }
 
-// quando a busca deu certo mas não há resultados (não é erro)
+// quando a busca deu certo mas não dá resultados (não é um erro, só não tem nada pra mostrar mesmo, a busca volta vazia)
 export function mensagemDeListaVazia({ titulo, texto, acao }) {
   return `<div class="mensagem-sem-conteudo" role="status">${ornamento("curto")}<h3 class="subtitulo-menor">${escaparHtml(titulo)}</h3>`
     + (texto ? `<p class="texto-auxiliar">${escaparHtml(texto)}</p>` : "")
@@ -192,7 +189,6 @@ export function mensagemDeNaoEncontrado({ titulo = "Conteúdo não encontrado", 
     + "</div>";
 }
 
-// blocos cinza piscando enquanto os dados chegam (aria-busy avisa o leitor de tela que está carregando)
 export function carregando({ tipo = "cards", quantidade = 3, texto = "Carregando…" } = {}) {
   const posicoes = Array.from({ length: quantidade }, (_, posicao) => posicao);
   let blocosCarregando;
@@ -207,7 +203,7 @@ export function carregando({ tipo = "cards", quantidade = 3, texto = "Carregando
   return `<div aria-busy="true" role="status"><span class="somente-para-leitor-de-tela">${escaparHtml(texto)}</span>${blocosCarregando}</div>`;
 }
 
-// ---------------------------------------------------------------- estrutura das páginas
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+- estrutura das páginas +-+-+-+-+-+-+-+-+-+-+-+-+-+-
 // título da página com o ornamento dourado em cima
 export function cabecalhoDaPagina({ titulo, rotulo, textoDeAbertura, ornamento: tipoDoOrnamento = "titulo", extra = "" }) {
   return `<header class="cabecalho-da-pagina">${tipoDoOrnamento ? ornamento(tipoDoOrnamento) : ""}`
@@ -224,7 +220,7 @@ export function tituloDeSecao({ titulo, id, descricao, acao = "", nivel = 2 }) {
     + "</div>";
 }
 
-// trilha "Início · Novenas · Novena X" no topo das páginas de detalhe
+// trilha do início dos dias da novena
 export function caminhoDeNavegacao(itens) {
   const itensDoCaminho = itens.map((item, posicao) => {
     const ehUltimoItem = posicao === itens.length - 1;
@@ -235,8 +231,7 @@ export function caminhoDeNavegacao(itens) {
   return `<nav class="caminho-de-navegacao" aria-label="Você está em"><ol>${itensDoCaminho}</ol></nav>`;
 }
 
-// ---------------------------------------------------------------- paginação
-// botões Anterior / números / Próxima; com uma página só, não aparece nada
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+- paginação +-+-+-+-+-+-+-+-+-+-+-+-+-+-
 export function paginacao({ pagina, totalPaginas, totalRegistros, rotulo = "Paginação" }) {
   if (!totalPaginas || totalPaginas <= 1) return "";
   const botoesDasPaginas = calcularPaginasVisiveis(pagina, totalPaginas).map((numeroDaPagina) =>
@@ -261,8 +256,8 @@ export function ligarPaginacao(container, aoMudarPagina) {
   });
 }
 
-// ---------------------------------------------------------------- seletor de data (liturgia e agenda)
-// dia anterior / calendário / próximo dia, travado no período que a API informou (hoje ± 7)
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+- calendário da data (liturgia e agenda) +-+-+-+-+-+-+-+-+-+-+-+-+-+-
+// dia anterior, calendário, próximo dia
 export function seletorDeData({ data, periodo }) {
   if (!periodo) return "";
   const idDoCampo = gerarId("data");
@@ -286,9 +281,8 @@ export function ligarSeletorDeData(container, aoMudarData) {
     campoDeData.addEventListener("change", () => { if (campoDeData.value) aoMudarData(campoDeData.value); }));
 }
 
-// ---------------------------------------------------------------- calendário da novena
-// Os 9 dias em círculos. Cada dia pode estar: hoje (agenda), marcado (rezado neste aparelho)
-// ou selecionado (aberto na tela). O aria-label é o texto que o leitor de tela lê.
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+- calendário da novena +-+-+-+-+-+-+-+-+-+-+-+-+-+-
+// Os 9 dias em círculos. Cada dia pode estar entre hoje (agenda), marcado (rezado neste aparelho) ou selecionado (aberto na tela)
 export function calendarioDaNovena({ novenaId, dias, diaAtual, marcados = [], diaSelecionado, comLegenda = true }) {
   const itensDoCalendario = dias.map((dia) => {
     const ehHoje = diaAtual === dia.numero_do_dia;
@@ -312,8 +306,8 @@ export function calendarioDaNovena({ novenaId, dias, diaAtual, marcados = [], di
   return `<ol class="calendario-da-novena" aria-label="Os nove dias da novena">${itensDoCalendario}</ol>${legenda}`;
 }
 
-// ---------------------------------------------------------------- campos de formulário
-// campo de busca; o botão de limpar só aparece quando há texto (a página controla com hidden)
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+- campos de formulário +-+-+-+-+-+-+-+-+-+-+-+-+-+-
+// campo de busca. O botão de limpar só aparece quando tem texto na página (a página controla com hidden)
 export function campoDeBuscaComBotaoDeLimpar({ rotulo, valor = "", placeholder = "", ajuda, id }) {
   const idDoCampo = id ?? gerarId("busca");
   return `<div class="campo-de-formulario"><label for="${idDoCampo}">${escaparHtml(rotulo)}</label><div class="campo-de-busca" role="search">${icone("lupa")}`
@@ -323,7 +317,7 @@ export function campoDeBuscaComBotaoDeLimpar({ rotulo, valor = "", placeholder =
     + "</div>";
 }
 
-// caixa de seleção (select) usada nos filtros por santo e por tipo
+// select que a gente usou nos filtros por santo e por tipo
 export function seletor({ rotulo, valor = "", opcoes, textoDeTodos = "Todos", desabilitado, id }) {
   const idDoCampo = id ?? gerarId("selecao");
   const opcoesDoSeletor = opcoes.map((opcao) =>
@@ -332,7 +326,7 @@ export function seletor({ rotulo, valor = "", opcoes, textoDeTodos = "Todos", de
     + `<select id="${idDoCampo}" class="caixa-de-selecao"${desabilitado ? " disabled" : ""}><option value="">${escaparHtml(textoDeTodos)}</option>${opcoesDoSeletor}</select></div>`;
 }
 
-// botões liga/desliga (momentos do dia); aria-pressed diz ao leitor de tela se está ligado
+// botões liga/desliga (momentos do dia)
 export function grupoDeOpcoes({ rotulo, valor = "", opcoes }) {
   const idDoRotulo = gerarId("opcoes");
   const botoesDasOpcoes = opcoes.map((opcao) => {
@@ -343,7 +337,7 @@ export function grupoDeOpcoes({ rotulo, valor = "", opcoes }) {
     + `<div class="grupo-de-opcoes" role="group" aria-labelledby="${idDoRotulo}">${botoesDasOpcoes}</div></div>`;
 }
 
-// ---------------------------------------------------------------- liturgia
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+- liturgia +-+-+-+-+-+-+-+-+-+-+-+-+-+-
 const Abas_Da_Liturgia = [
   { para: "/liturgia.html", montarEndereco: enderecos.liturgiaDoDia, nome: "Liturgia do Dia", icone: "liturgia" },
   { para: "/liturgia-horas.html", montarEndereco: enderecos.liturgiaDasHoras, nome: "Liturgia das Horas", icone: "horas" },

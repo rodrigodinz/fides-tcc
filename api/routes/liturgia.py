@@ -12,8 +12,6 @@ from ..errors import Respostas_De_Erro
 from ..schemas.liturgia import RespostaLiturgiaDasHoras, RespostaLiturgiaDoDia
 from ..services import liturgia as servico
 
-# APIRouter agrupa as rotas deste módulo: prefix entra antes de cada caminho, tags agrupa no /docs
-# e responses documenta os erros padrão (400, 404, 422...) no OpenAPI
 router = APIRouter(prefix="/liturgia", tags=["Liturgia"], responses=Respostas_De_Erro)
 # Depends(get_session): o FastAPI abre uma sessão do banco por requisição e fecha no final
 Sessao = Annotated[Session, Depends(get_session)]

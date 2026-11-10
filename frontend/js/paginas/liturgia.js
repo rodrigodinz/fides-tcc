@@ -1,5 +1,5 @@
-// Liturgia do Dia. A Segunda Leitura só aparece quando existe (domingos e solenidades).
-// O aviso de "conteúdo de demonstração" vem da própria API.
+// Liturgia do Dia (Primeira leitura, Salmo e Evanelho)
+// A Segunda Leitura só aparece em domingos e solenidades
 import { montarLayout } from "../layout.js";
 import { servicoLiturgia } from "../api/servicos.js";
 import { ErroDaApi } from "../api/cliente.js";
@@ -17,9 +17,8 @@ montarLayout();
 const topoDaPagina = document.getElementById("topo-da-pagina");
 const conteudoDaLiturgia = document.getElementById("conteudo-da-liturgia");
 const consultarLiturgia = criarConsulta();
-let periodoConhecido = null;  // período (hoje ± 7) da última resposta: mantém o seletor de data na tela
+let periodoConhecido = null;  // período (hoje ± 7) da última resposta (Mantém o negócio de data ativado na tela)
 
-// cabeçalho, abas e seletor de data mudam junto com a data escolhida
 function desenharTopo({ data, liturgiaDoDia }) {
   const dataExibida = liturgiaDoDia?.data ?? data ?? periodoConhecido?.hoje;
   topoDaPagina.innerHTML = cabecalhoDaPagina({
@@ -36,7 +35,7 @@ function mudarData(dataEscolhida) {
   carregarLiturgia();
 }
 
-// cada leitura vira um bloco com ornamento e título
+// cada leitura vira um bloco com rococó e título
 const blocoDeLeitura = (rotulo, texto, ehCitacao) =>
   `<section class="bloco-de-leitura">${ornamento("curto")}<h2 class="subtitulo">${rotulo}</h2><p class="texto-com-quebras-de-linha${ehCitacao ? " citacao" : ""}">${escaparHtml(texto)}</p></section>`;
 

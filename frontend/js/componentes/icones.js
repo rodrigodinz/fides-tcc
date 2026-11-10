@@ -1,4 +1,4 @@
-// Desenhos dos ícones (grade 24x24), guardados como texto SVG.
+// Desenhos dos ícones (grade 24x24), guardados como texto SVG
 // A função icone() coloca o desenho dentro de um <svg> com a classe icone.
 export const Desenhos_Dos_Icones = {
   inicio: '<path d="M4 10.5L12 4l8 6.5"></path><path d="M6 9v10.5h12V9"></path><path d="M10 19.5v-5h4v5"></path>',
@@ -31,7 +31,7 @@ export const Desenhos_Dos_Icones = {
 
 export const Nomes_Dos_Icones = Object.keys(Desenhos_Dos_Icones);
 
-// rotulo: quando o ícone tem significado sozinho, o leitor de tela lê o rótulo; senão fica escondido (aria-hidden)
+// rotulo (quando o ícone tem significado sozinho, o leitor de tela lê o rótulo)
 export function icone(nome, { tamanho, rotulo, classe = "" } = {}) {
   const desenhoDoIcone = Desenhos_Dos_Icones[nome];
   if (!desenhoDoIcone) return "";

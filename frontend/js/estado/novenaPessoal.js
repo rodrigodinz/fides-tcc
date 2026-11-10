@@ -5,7 +5,7 @@ export const Limite_De_Caracteres_Dos_Pedidos = 4000;
 
 const ordenarDias = (diaA, diaB) => diaA - diaB;
 
-// limpa o que veio do navegador: só dias de 1 a 9, sem repetição, e pedidos com até 4000 caracteres
+// limpa o que veio do navegador (só dias de 1 a 9 e requisições com até 4000 caracteres)
 function normalizarDadosDaNovena(dadosGuardados, totalDias = 9) {
   const marcados = Array.isArray(dadosGuardados?.marcados)
     ? [...new Set(dadosGuardados.marcados.filter((dia) => Number.isInteger(dia) && dia >= 1 && dia <= totalDias))].sort(ordenarDias)

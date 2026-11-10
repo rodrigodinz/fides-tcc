@@ -1,4 +1,4 @@
-// Liturgia das Horas: Laudes, Horas médias e Vésperas da data escolhida.
+// Liturgia das Horas (Laudes, Horas médias e Vésperas)
 import { montarLayout } from "../layout.js";
 import { servicoLiturgia } from "../api/servicos.js";
 import { ErroDaApi } from "../api/cliente.js";

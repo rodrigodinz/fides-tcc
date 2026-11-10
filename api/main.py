@@ -1,5 +1,5 @@
 """Execução (na raiz do repositório): uvicorn api.main:app --reload
-Depois é só abrir http://127.0.0.1:8000 no navegador: a API e o site saem do mesmo servidor."""
+Depois é só abrir http://127.0.0.1:8000 no navegador. a API e o site saem do mesmo servidor."""
 import mimetypes
 import os
 
@@ -13,8 +13,7 @@ from .errors import Respostas_De_Erro, CapturaDeErrosInternos, registrar_tratado
 from .routes import agenda, health, liturgia, livros, novenas, oracoes, santos
 
 
-# No Windows, o registro do sistema às vezes diz que .js é "text/plain" e o navegador
-# se recusa a rodar o script. Aqui fixamos o tipo certo de cada arquivo do site.
+# No Windows, o registro do sistema às vezes diz que .js é "text/plain" e o navegador se recusa a rodar o script. Aqui fixamos o tipo certo de cada arquivo do site.
 mimetypes.add_type("text/javascript", ".js")
 mimetypes.add_type("text/css", ".css")
 mimetypes.add_type("image/svg+xml", ".svg")
@@ -31,13 +30,10 @@ class ArquivosEstaticosTolerantes(StaticFiles):
         return await super().get_response(path, scope)
 
 
-# Caminhos que pertencem à API: nunca são procurados na pasta do site,
-# assim uma rota inexistente da API continua respondendo com o erro em JSON.
 Caminhos_Da_Api = ("/api/", "/api", "/health", "/static/", "/docs", "/redoc", "/openapi.json")
 
 
-# Liga a pasta frontend/ ao servidor. Ela vira a "rota padrão": só é usada quando
-# nenhuma rota da API atendeu o endereço (por isso a API sempre tem prioridade).
+# Liga a pasta frontend/ ao servidor. Ela vira a "rota padrão"
 def servir_site(app: FastAPI, diretorio_do_frontend) -> None:
     # html=True: "/" entrega o index.html e um endereço inexistente entrega o 404.html
     arquivos_do_site = StaticFiles(directory=diretorio_do_frontend, html=True)
@@ -60,7 +56,6 @@ def criar_aplicacao() -> FastAPI:
                   responses={422: Respostas_De_Erro[422], 500: Respostas_De_Erro[500]})
 
     app.add_middleware(CapturaDeErrosInternos)  # qualquer exceção não tratada vira um 500 em JSON
-    # CORS: o site já sai do mesmo servidor; isto só serve se alguém abrir o front em outro endereço. Só GET no MVP
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(configuracoes.origens_permitidas),
@@ -71,11 +66,11 @@ def criar_aplicacao() -> FastAPI:
     registrar_tratadores_de_erro(app)
 
     app.include_router(health.router)
-    # todas as rotas de conteúdo ficam sob /api/v1
+    # todas as rotas de conteúdo ficam na /api/v1
     for modulo_de_rotas in (santos, oracoes, novenas, livros, liturgia, agenda):
         app.include_router(modulo_de_rotas.router, prefix="/api/v1")
 
-    # check_dir=False: a API sobe mesmo sem o diretório/imagens (ai vai aparecer o erro 404).
+    # check_dir=False → a API sobe mesmo sem o diretório/imagens (ai vai aparecer o erro 404).
     app.mount("/static", ArquivosEstaticosTolerantes(directory=configuracoes.diretorio_estatico, check_dir=False),
               name="static")
 
