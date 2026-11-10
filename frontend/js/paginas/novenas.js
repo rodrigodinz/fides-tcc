@@ -5,7 +5,7 @@ import { criarConsulta, paginaEstaVazia } from "../utils/consulta.js";
 import { lerParametrosDaUrl, atualizarParametrosDaUrl, aoMudarParametrosDaUrl } from "../utils/url.js";
 import { lerIdDaUrl, lerNumeroDaPagina } from "../utils/paginacao.js";
 import {
-  botao, cardNovena, carregando, estadoErro, estadoVazio, ligarPaginacao, ligarTentarNovamente, paginacao, seletor,
+  botao, cardDaNovena, carregando, mensagemDeErro, mensagemDeListaVazia, ligarPaginacao, ligarTentarNovamente, paginacao, seletor,
 } from "../componentes/componentes.js";
 
 montarLayout();
@@ -65,10 +65,10 @@ async function carregarNovenas() {
   areaDasNovenas.setAttribute("aria-busy", "false");
 
   if (resultado.estado === "erro") {
-    areaDasNovenas.innerHTML = estadoErro({ erro: resultado.erro, conteudoBuscado: "as novenas" });
+    areaDasNovenas.innerHTML = mensagemDeErro({ erro: resultado.erro, conteudoBuscado: "as novenas" });
     ligarTentarNovamente(areaDasNovenas, carregarNovenas);
   } else if (resultado.estado === "vazio") {
-    areaDasNovenas.innerHTML = estadoVazio({
+    areaDasNovenas.innerHTML = mensagemDeListaVazia({
       titulo: "Nenhuma novena encontrada",
       texto: santoFiltrado ? "Este santo ainda não tem novenas cadastradas." : null,
       acao: santoFiltrado ? botao({ variante: "secundario", icone: "fechar", texto: "Ver todas as novenas", atributos: "data-ver-todas" }) : null,
@@ -76,7 +76,7 @@ async function carregarNovenas() {
     areaDasNovenas.querySelector("[data-ver-todas]")?.addEventListener("click", () => filtrarPorSanto(""));
   } else {
     const paginaDeNovenas = resultado.dados;
-    areaDasNovenas.innerHTML = `<div class="fd-grade fd-grade--2">${paginaDeNovenas.itens.map((novena) => cardNovena(novena)).join("")}</div>`
+    areaDasNovenas.innerHTML = `<div class="grade grade-de-2-colunas">${paginaDeNovenas.itens.map((novena) => cardDaNovena(novena)).join("")}</div>`
       + paginacao({ pagina: paginaDeNovenas.pagina, totalPaginas: paginaDeNovenas.total_paginas, totalRegistros: paginaDeNovenas.total_registros_filtros, rotulo: "Páginas de novenas" });
     ligarPaginacao(areaDasNovenas, irParaPagina);
   }

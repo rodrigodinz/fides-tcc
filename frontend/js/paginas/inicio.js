@@ -8,7 +8,7 @@ import { enderecos } from "../utils/enderecos.js";
 import { listarSantosAcessados } from "../estado/santosAcessados.js";
 import { escaparHtml } from "../componentes/html.js";
 import {
-  alerta, botaoLink, card, cardSanto, carregando, estadoErro, ligarTentarNovamente, tituloSecao,
+  alerta, botaoLink, card, cardDoSanto, carregando, mensagemDeErro, ligarTentarNovamente, tituloDeSecao,
 } from "../componentes/componentes.js";
 
 montarLayout();
@@ -18,11 +18,11 @@ function desenharNovenasDeHoje(conteudosDoDia) {
   if (conteudosDoDia.novenas_em_andamento.length === 0) {
     return card({
       simples: true, titulo: "Nenhuma novena em andamento hoje", nivel: 3,
-      corpo: '<p class="fd-card__corpo-texto">As novenas agendadas aparecem aqui no período em que estão sendo rezadas.</p>'
-        + `<p style="margin-top:12px"><a class="fd-link" href="${enderecos.novenas()}">Ver todas as novenas</a></p>`,
+      corpo: '<p class="texto-do-card">As novenas agendadas aparecem aqui no período em que estão sendo rezadas.</p>'
+        + `<p style="margin-top:12px"><a class="link" href="${enderecos.novenas()}">Ver todas as novenas</a></p>`,
     });
   }
-  return `<div class="fd-pilha-cards">${conteudosDoDia.novenas_em_andamento.map((novenaEmAndamento) => card({
+  return `<div class="pilha-de-cards">${conteudosDoDia.novenas_em_andamento.map((novenaEmAndamento) => card({
     destaque: true, nivel: 3,
     rotulo: `Em andamento · Dia ${novenaEmAndamento.dia_atual} de ${novenaEmAndamento.total_dias}`,
     titulo: novenaEmAndamento.novena.titulo, para: enderecos.novena(novenaEmAndamento.novena.id), meta: novenaEmAndamento.novena.santo?.nome,
@@ -33,10 +33,10 @@ function desenharNovenasDeHoje(conteudosDoDia) {
 function desenharLiturgiaDeHoje(conteudosDoDia) {
   const liturgiaDoDia = conteudosDoDia.liturgia_do_dia;
   const leituras = liturgiaDoDia
-    ? `<ul class="fd-lista" style="margin-top:16px"><li>Primeira Leitura</li><li>Salmo Responsorial</li>${liturgiaDoDia.segunda_leitura ? "<li>Segunda Leitura</li>" : ""}<li>Evangelho</li></ul>`
-    : '<p class="fd-card__corpo-texto">Não há liturgia cadastrada para hoje.</p>';
+    ? `<ul class="lista" style="margin-top:16px"><li>Primeira Leitura</li><li>Salmo Responsorial</li>${liturgiaDoDia.segunda_leitura ? "<li>Segunda Leitura</li>" : ""}<li>Evangelho</li></ul>`
+    : '<p class="texto-do-card">Não há liturgia cadastrada para hoje.</p>';
   const horas = conteudosDoDia.liturgia_das_horas.length > 0
-    ? `<p class="fd-card__corpo-texto fd-card__acima"><a class="fd-link" href="${enderecos.liturgiaDasHoras(conteudosDoDia.data)}">Liturgia das Horas: ${escaparHtml(conteudosDoDia.liturgia_das_horas.map((hora) => hora.bloco.nome).join(", "))}</a></p>`
+    ? `<p class="texto-do-card acima-do-link-do-card"><a class="link" href="${enderecos.liturgiaDasHoras(conteudosDoDia.data)}">Liturgia das Horas: ${escaparHtml(conteudosDoDia.liturgia_das_horas.map((hora) => hora.bloco.nome).join(", "))}</a></p>`
     : "";
   return card({
     nivel: 3, rotulo: "Liturgia do Dia", titulo: liturgiaDoDia?.santo_celebrado || "Liturgia do Dia",
@@ -47,21 +47,21 @@ function desenharLiturgiaDeHoje(conteudosDoDia) {
 
 async function carregarSecaoHoje() {
   const secao = document.getElementById("secao-hoje");
-  const tituloDaSecao = (descricao) => tituloSecao({
-    id: "titulo-hoje", titulo: "Hoje", descricao, acao: `<a class="fd-link" href="${enderecos.agenda()}">Ver a agenda completa</a>`,
+  const tituloDaSecao = (descricao) => tituloDeSecao({
+    id: "titulo-hoje", titulo: "Hoje", descricao, acao: `<a class="link" href="${enderecos.agenda()}">Ver a agenda completa</a>`,
   });
   secao.innerHTML = tituloDaSecao(null) + carregando({ quantidade: 2, texto: "Carregando a agenda de hoje…" });
   const resultado = await criarConsulta()((signal) => servicoAgenda.verConteudosDoDia(undefined, { signal }));
   if (resultado.estado === "erro") {
-    secao.innerHTML = tituloDaSecao(null) + estadoErro({ erro: resultado.erro, conteudoBuscado: "a agenda de hoje" });
+    secao.innerHTML = tituloDaSecao(null) + mensagemDeErro({ erro: resultado.erro, conteudoBuscado: "a agenda de hoje" });
     ligarTentarNovamente(secao, carregarSecaoHoje);
     return;
   }
   const conteudosDoDia = resultado.dados;
   secao.innerHTML = tituloDaSecao(escreverDataPorExtenso(conteudosDoDia.data))
-    + '<div class="fd-hoje">'
-    + `<div><h3 class="fd-h3" style="margin-bottom:16px">Novenas em andamento</h3>${desenharNovenasDeHoje(conteudosDoDia)}</div>`
-    + `<div><h3 class="fd-h3" style="margin-bottom:16px">Liturgia</h3>${desenharLiturgiaDeHoje(conteudosDoDia)}</div>`
+    + '<div class="conteudo-de-hoje">'
+    + `<div><h3 class="subtitulo" style="margin-bottom:16px">Novenas em andamento</h3>${desenharNovenasDeHoje(conteudosDoDia)}</div>`
+    + `<div><h3 class="subtitulo" style="margin-bottom:16px">Liturgia</h3>${desenharLiturgiaDeHoje(conteudosDoDia)}</div>`
     + "</div>"
     + `<div style="margin-top:24px">${alerta({ tipo: "aviso", titulo: "Liturgia de demonstração", papel: "note", corpo: `<p>${escaparHtml(conteudosDoDia.aviso)}</p>` })}</div>`;
 }
@@ -69,20 +69,20 @@ async function carregarSecaoHoje() {
 // ---------------------------------------------------------------- seção "Santos"
 async function carregarSecaoSantos() {
   const secao = document.getElementById("secao-santos");
-  const tituloDaSecao = tituloSecao({
+  const tituloDaSecao = tituloDeSecao({
     id: "titulo-santos", titulo: "Santos", descricao: "Vidas, orações, novenas e livros de quem nos precede na fé.",
-    acao: `<a class="fd-link" href="${enderecos.santos()}">Ver todos os santos</a>`,
+    acao: `<a class="link" href="${enderecos.santos()}">Ver todos os santos</a>`,
   });
   secao.innerHTML = tituloDaSecao + carregando({ tipo: "santos", quantidade: 3, texto: "Carregando santos…" });
   const resultado = await criarConsulta()((signal) => servicoSantos.listarSantos({ limite: 3 }, { signal }),
     { verificarSeVazio: (pagina) => pagina.itens.length === 0 });
   if (resultado.estado === "vazio") { secao.remove(); return; }  // sem santos cadastrados, a seção some
   if (resultado.estado === "erro") {
-    secao.innerHTML = tituloDaSecao + estadoErro({ erro: resultado.erro, conteudoBuscado: "os santos" });
+    secao.innerHTML = tituloDaSecao + mensagemDeErro({ erro: resultado.erro, conteudoBuscado: "os santos" });
     ligarTentarNovamente(secao, carregarSecaoSantos);
     return;
   }
-  secao.innerHTML = tituloDaSecao + `<div class="fd-grade fd-grade--3">${resultado.dados.itens.map((santo) => cardSanto(santo)).join("")}</div>`;
+  secao.innerHTML = tituloDaSecao + `<div class="grade grade-de-3-colunas">${resultado.dados.itens.map((santo) => cardDoSanto(santo)).join("")}</div>`;
 }
 
 // ---------------------------------------------------------------- seção "Para continuar a leitura"
@@ -91,9 +91,9 @@ async function carregarSecaoRecomendados() {
   const secao = document.getElementById("secao-recomendados");
   const idsDosSantosAcessados = listarSantosAcessados();
   if (idsDosSantosAcessados.length === 0) { secao.remove(); return; }
-  const tituloDaSecao = tituloSecao({
+  const tituloDaSecao = tituloDeSecao({
     id: "titulo-leituras", titulo: "Para continuar a leitura", descricao: "Livros dos santos que você visitou neste dispositivo.",
-    acao: `<a class="fd-link" href="${enderecos.livros()}">Ver livros</a>`,
+    acao: `<a class="link" href="${enderecos.livros()}">Ver livros</a>`,
   });
   secao.hidden = false;
   secao.innerHTML = tituloDaSecao + carregando({ quantidade: 2 });
@@ -102,7 +102,7 @@ async function carregarSecaoRecomendados() {
     { verificarSeVazio: (pagina) => pagina.itens.length === 0 },
   );
   if (resultado.estado !== "sucesso") { secao.remove(); return; }
-  secao.innerHTML = tituloDaSecao + `<div class="fd-grade fd-grade--3">${resultado.dados.itens.map((livro) => card({
+  secao.innerHTML = tituloDaSecao + `<div class="grade grade-de-3-colunas">${resultado.dados.itens.map((livro) => card({
     titulo: livro.titulo, para: enderecos.livro(livro.id), meta: [livro.autor, livro.santo?.nome].filter(Boolean).join(" · "), rotulo: "Recomendação de leitura",
   })).join("")}</div>`;
 }

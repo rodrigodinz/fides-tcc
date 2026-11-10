@@ -1,33 +1,125 @@
-.fd-hero { padding-block: var(--espaco-5) 0; }
-.fd-hero .fd-h1 { font-size: 44px; }
-@media (min-width: 768px) { .fd-hero { padding-block: var(--espaco-7) 0; } .fd-hero .fd-h1 { font-size: 60px; } }
-.fd-hero__lead { font-family: var(--font-serif); font-style: normal; font-size: 22px; line-height: 1.4; color: var(--vinho); max-width: 34rem; margin: var(--espaco-3) auto 0; }
-@media (min-width: 768px) { .fd-hero__lead { font-size: 25px; } }
-.fd-hero__acoes { justify-content: center; margin-top: var(--espaco-5); }
-
-.fd-hoje { display: grid; gap: var(--espaco-6); grid-template-columns: minmax(0, 1fr); }
-@media (min-width: 1024px) { .fd-hoje { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: var(--espaco-8); } }
-.fd-pilha-cards { display: grid; gap: var(--espaco-5); }
-
-.fd-santo-topo { display: grid; gap: var(--espaco-6); grid-template-columns: minmax(0, 1fr); align-items: start; }
-.fd-santo-topo .fd-moldura { width: min(300px, 78%); margin: 0 auto; }
-.fd-santo-topo .fd-cabecalho { text-align: center; }
-@media (min-width: 900px) {
-  .fd-santo-topo { grid-template-columns: 320px minmax(0, 1fr); gap: var(--espaco-8); }
-  .fd-santo-topo .fd-moldura { width: 100%; margin: 0; }
-  .fd-santo-topo .fd-cabecalho { text-align: left; }
-  .fd-santo-topo .fd-cabecalho .fd-h1 { text-align: left; font-size: 52px; }
-  .fd-santo-topo .fd-orn--titulo { margin-left: 0; }
+.abertura-da-pagina-inicial {
+  padding-block: var(--espaco-5) 0;
 }
-.fd-santo-bio { margin-top: var(--espaco-5); text-align: left; }
-.fd-santo-secoes { display: grid; gap: var(--espaco-7); grid-template-columns: minmax(0, 1fr); }
-@media (min-width: 1024px) { .fd-santo-secoes { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: var(--espaco-8); } }
 
-.fd-novena-topo { display: grid; gap: var(--espaco-5); }
-.fd-novena-dia { display: grid; gap: var(--espaco-6); grid-template-columns: minmax(0, 1fr); margin-top: var(--espaco-6); }
-@media (min-width: 1024px) { .fd-novena-dia { grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: var(--espaco-8); } }
-.fd-reflexao { font-size: 17px; line-height: 1.7; }
+.abertura-da-pagina-inicial .titulo-da-pagina {
+  font-size: 44px;
+}
 
-.fd-livro-autor { margin-top: var(--espaco-3); font-size: 16px; color: var(--grafite-suave); text-align: center; }
-.fd-grade-oracoes { display: grid; gap: var(--espaco-5); grid-template-columns: minmax(0, 1fr); align-items: start; }
-@media (min-width: 1024px) { .fd-grade-oracoes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 768px) {
+  .abertura-da-pagina-inicial {
+    padding-block: var(--espaco-7) 0;
+  }
+
+  .abertura-da-pagina-inicial .titulo-da-pagina {
+    font-size: 60px;
+  }
+}
+
+.texto-de-abertura-da-pagina-inicial {
+  font-family: var(--fonte-com-serifa); font-style: normal; font-size: 22px; line-height: 1.4; color: var(--vinho); max-width: 34rem; margin: var(--espaco-3) auto 0;
+}
+
+@media (min-width: 768px) {
+  .texto-de-abertura-da-pagina-inicial {
+    font-size: 25px;
+  }
+}
+
+.botoes-da-abertura {
+  justify-content: center; margin-top: var(--espaco-5);
+}
+
+.conteudo-de-hoje {
+  display: grid; gap: var(--espaco-6); grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 1024px) {
+  .conteudo-de-hoje {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: var(--espaco-8);
+  }
+}
+
+.pilha-de-cards {
+  display: grid; gap: var(--espaco-5);
+}
+
+.topo-da-pagina-do-santo {
+  display: grid; gap: var(--espaco-6); grid-template-columns: minmax(0, 1fr); align-items: start;
+}
+
+.topo-da-pagina-do-santo .moldura-do-retrato {
+  width: min(300px, 78%); margin: 0 auto;
+}
+
+.topo-da-pagina-do-santo .cabecalho-da-pagina {
+  text-align: center;
+}
+
+@media (min-width: 900px) {
+  .topo-da-pagina-do-santo {
+    grid-template-columns: 320px minmax(0, 1fr); gap: var(--espaco-8);
+  }
+
+  .topo-da-pagina-do-santo .moldura-do-retrato {
+    width: 100%; margin: 0;
+  }
+
+  .topo-da-pagina-do-santo .cabecalho-da-pagina {
+    text-align: left;
+  }
+
+  .topo-da-pagina-do-santo .cabecalho-da-pagina .titulo-da-pagina {
+    text-align: left; font-size: 52px;
+  }
+
+  .topo-da-pagina-do-santo .ornamento-de-titulo {
+    margin-left: 0;
+  }
+}
+
+.biografia-do-santo {
+  margin-top: var(--espaco-5); text-align: left;
+}
+
+.secoes-da-pagina-do-santo {
+  display: grid; gap: var(--espaco-7); grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 1024px) {
+  .secoes-da-pagina-do-santo {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: var(--espaco-8);
+  }
+}
+
+.topo-da-pagina-da-novena {
+  display: grid; gap: var(--espaco-5);
+}
+
+.conteudo-do-dia-da-novena {
+  display: grid; gap: var(--espaco-6); grid-template-columns: minmax(0, 1fr); margin-top: var(--espaco-6);
+}
+
+@media (min-width: 1024px) {
+  .conteudo-do-dia-da-novena {
+    grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: var(--espaco-8);
+  }
+}
+
+.texto-de-reflexao {
+  font-size: 17px; line-height: 1.7;
+}
+
+.autor-do-livro {
+  margin-top: var(--espaco-3); font-size: 16px; color: var(--grafite-suave); text-align: center;
+}
+
+.grade-de-oracoes {
+  display: grid; gap: var(--espaco-5); grid-template-columns: minmax(0, 1fr); align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .grade-de-oracoes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

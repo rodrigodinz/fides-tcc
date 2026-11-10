@@ -19,18 +19,18 @@
 <!-- Mostrada pelo servidor para qualquer endereço que não existe -->
 <!-- data-modulo diz qual link do menu fica marcado como página atual -->
 <body data-modulo="">
-  <div class="fd-app">
-    <a href="#conteudo" class="fd-pular">Pular para o conteúdo</a>
+  <div class="estrutura-do-site">
+    <a href="#conteudo" class="link-pular-para-o-conteudo">Pular para o conteúdo</a>
     <!-- a navbar e o menu lateral entram aqui (layout.js) -->
-    <main id="conteudo" tabindex="-1" class="fd-principal">
-      <div class="fd-trilho fd-trilho--esq" aria-hidden="true"></div>
-      <div class="fd-trilho fd-trilho--dir" aria-hidden="true"></div>
-      <div class="fd-container fd-pagina">
-        <div class="fd-vazio">
-          <img class="fd-orn fd-orn--curto" src="/imagens/ornamentos/divisor-curto-familia-a.svg" width="200" height="20" alt="" aria-hidden="true">
-          <h2 class="fd-h3">Página não encontrada</h2>
-          <p class="fd-aux">O endereço pode estar incorreto ou o conteúdo não existe mais.</p>
-          <div class="fd-vazio__acoes"><a class="fd-btn fd-btn--secundario" href="/"><svg class="fd-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 6l-6 6 6 6"></path></svg>Ir para o início</a></div>
+    <main id="conteudo" tabindex="-1" class="conteudo-principal">
+      <div class="trilho-ornamental trilho-ornamental-da-esquerda" aria-hidden="true"></div>
+      <div class="trilho-ornamental trilho-ornamental-da-direita" aria-hidden="true"></div>
+      <div class="area-centralizada espacamento-da-pagina">
+        <div class="mensagem-sem-conteudo">
+          <img class="ornamento ornamento-divisor-curto" src="/imagens/ornamentos/divisor-curto-familia-a.svg" width="200" height="20" alt="" aria-hidden="true">
+          <h2 class="subtitulo">Página não encontrada</h2>
+          <p class="texto-auxiliar">O endereço pode estar incorreto ou o conteúdo não existe mais.</p>
+          <div class="botoes-da-mensagem-sem-conteudo"><a class="botao botao-secundario" href="/"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 6l-6 6 6 6"></path></svg>Ir para o início</a></div>
         </div>
       </div>
     </main>

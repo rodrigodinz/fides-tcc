@@ -9,7 +9,7 @@ import { escreverDataPorExtenso } from "../utils/datas.js";
 import { ordenarHorasDaLiturgia } from "../utils/liturgia.js";
 import { escaparHtml } from "../componentes/html.js";
 import {
-  abasLiturgia, avisoDemonstracao, cabecalhoPagina, carregando, erroDeData, estadoVazio, ligarSeletorData, ornamento, seletorData,
+  abasDaLiturgia, avisoDemonstracao, cabecalhoDaPagina, carregando, erroDeData, mensagemDeListaVazia, ligarSeletorDeData, ornamento, seletorDeData,
 } from "../componentes/componentes.js";
 
 montarLayout();
@@ -21,13 +21,13 @@ let periodoConhecido = null;
 
 function desenharTopo({ data, liturgiaDasHoras }) {
   const dataExibida = liturgiaDasHoras?.data ?? data ?? periodoConhecido?.hoje;
-  topoDaPagina.innerHTML = cabecalhoPagina({
+  topoDaPagina.innerHTML = cabecalhoDaPagina({
     titulo: "Liturgia das Horas", rotulo: dataExibida ? escreverDataPorExtenso(dataExibida) : "Liturgia",
     textoDeAbertura: "Laudes, Horas médias e Vésperas.",
   })
-    + abasLiturgia(data)
-    + (periodoConhecido && dataExibida ? seletorData({ data: dataExibida, periodo: periodoConhecido }) : "");
-  ligarSeletorData(topoDaPagina, (dataEscolhida) => mudarData(dataEscolhida));
+    + abasDaLiturgia(data)
+    + (periodoConhecido && dataExibida ? seletorDeData({ data: dataExibida, periodo: periodoConhecido }) : "");
+  ligarSeletorDeData(topoDaPagina, (dataEscolhida) => mudarData(dataEscolhida));
 }
 
 function mudarData(dataEscolhida) {
@@ -56,13 +56,13 @@ async function carregarHoras() {
   desenharTopo({ data, liturgiaDasHoras });
   if (resultado.estado === "vazio") {
     conteudoDasHoras.innerHTML = avisoDemonstracao(liturgiaDasHoras.aviso)
-      + estadoVazio({ titulo: "Sem Liturgia das Horas para esta data", texto: "Escolha outra data no período disponível." });
+      + mensagemDeListaVazia({ titulo: "Sem Liturgia das Horas para esta data", texto: "Escolha outra data no período disponível." });
     return;
   }
   // um bloco por hora, sempre na ordem Laudes -> Horas médias -> Vésperas
   conteudoDasHoras.innerHTML = avisoDemonstracao(liturgiaDasHoras.aviso)
     + ordenarHorasDaLiturgia(liturgiaDasHoras.horas).map((hora) =>
-      `<section class="fd-bloco" aria-labelledby="h-${hora.bloco.codigo}">${ornamento("curto")}<h2 id="h-${hora.bloco.codigo}" class="fd-h3">${escaparHtml(hora.bloco.nome)}</h2><p class="fd-texto-longo">${escaparHtml(hora.texto)}</p></section>`).join("");
+      `<section class="bloco-de-leitura" aria-labelledby="h-${hora.bloco.codigo}">${ornamento("curto")}<h2 id="h-${hora.bloco.codigo}" class="subtitulo">${escaparHtml(hora.bloco.nome)}</h2><p class="texto-com-quebras-de-linha">${escaparHtml(hora.texto)}</p></section>`).join("");
 }
 
 aoMudarParametrosDaUrl(carregarHoras);

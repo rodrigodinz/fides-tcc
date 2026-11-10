@@ -9,7 +9,7 @@ import { lerDataDaUrl, definirDataNaUrl } from "../utils/dataNaUrl.js";
 import { escreverDataPorExtenso } from "../utils/datas.js";
 import { escaparHtml } from "../componentes/html.js";
 import {
-  abasLiturgia, avisoDemonstracao, cabecalhoPagina, carregando, erroDeData, ligarSeletorData, ornamento, seletorData,
+  abasDaLiturgia, avisoDemonstracao, cabecalhoDaPagina, carregando, erroDeData, ligarSeletorDeData, ornamento, seletorDeData,
 } from "../componentes/componentes.js";
 
 montarLayout();
@@ -22,13 +22,13 @@ let periodoConhecido = null;  // período (hoje ± 7) da última resposta: mant�
 // cabeçalho, abas e seletor de data mudam junto com a data escolhida
 function desenharTopo({ data, liturgiaDoDia }) {
   const dataExibida = liturgiaDoDia?.data ?? data ?? periodoConhecido?.hoje;
-  topoDaPagina.innerHTML = cabecalhoPagina({
+  topoDaPagina.innerHTML = cabecalhoDaPagina({
     titulo: "Liturgia do Dia", rotulo: dataExibida ? escreverDataPorExtenso(dataExibida) : "Liturgia",
     textoDeAbertura: liturgiaDoDia?.santo_celebrado || null,
   })
-    + abasLiturgia(data)
-    + (periodoConhecido && dataExibida ? seletorData({ data: dataExibida, periodo: periodoConhecido }) : "");
-  ligarSeletorData(topoDaPagina, (dataEscolhida) => mudarData(dataEscolhida));
+    + abasDaLiturgia(data)
+    + (periodoConhecido && dataExibida ? seletorDeData({ data: dataExibida, periodo: periodoConhecido }) : "");
+  ligarSeletorDeData(topoDaPagina, (dataEscolhida) => mudarData(dataEscolhida));
 }
 
 function mudarData(dataEscolhida) {
@@ -38,7 +38,7 @@ function mudarData(dataEscolhida) {
 
 // cada leitura vira um bloco com ornamento e título
 const blocoDeLeitura = (rotulo, texto, ehCitacao) =>
-  `<section class="fd-bloco">${ornamento("curto")}<h2 class="fd-h3">${rotulo}</h2><p class="fd-texto-longo${ehCitacao ? " fd-citacao" : ""}">${escaparHtml(texto)}</p></section>`;
+  `<section class="bloco-de-leitura">${ornamento("curto")}<h2 class="subtitulo">${rotulo}</h2><p class="texto-com-quebras-de-linha${ehCitacao ? " citacao" : ""}">${escaparHtml(texto)}</p></section>`;
 
 async function carregarLiturgia() {
   const { data, dataInvalida } = lerDataDaUrl();
@@ -66,7 +66,7 @@ async function carregarLiturgia() {
     + (liturgiaDoDia.salmo ? blocoDeLeitura("Salmo Responsorial", liturgiaDoDia.salmo, true) : "")
     + (liturgiaDoDia.segunda_leitura ? blocoDeLeitura("Segunda Leitura", liturgiaDoDia.segunda_leitura) : "")
     + (liturgiaDoDia.evangelho ? blocoDeLeitura("Evangelho", liturgiaDoDia.evangelho) : "")
-    + (semLeituras ? '<p class="fd-aux">As leituras desta data não foram cadastradas.</p>' : "");
+    + (semLeituras ? '<p class="texto-auxiliar">As leituras desta data não foram cadastradas.</p>' : "");
 }
 
 aoMudarParametrosDaUrl(carregarLiturgia);

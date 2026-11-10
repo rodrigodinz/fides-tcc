@@ -19,27 +19,27 @@
 <!-- Lista e busca de santos (santos.html?nome=...&pagina=...) -->
 <!-- data-modulo diz qual link do menu fica marcado como página atual -->
 <body data-modulo="santos">
-  <div class="fd-app">
-    <a href="#conteudo" class="fd-pular">Pular para o conteúdo</a>
+  <div class="estrutura-do-site">
+    <a href="#conteudo" class="link-pular-para-o-conteudo">Pular para o conteúdo</a>
     <!-- a navbar e o menu lateral entram aqui (layout.js) -->
-    <main id="conteudo" tabindex="-1" class="fd-principal">
-      <div class="fd-trilho fd-trilho--esq" aria-hidden="true"></div>
-      <div class="fd-trilho fd-trilho--dir" aria-hidden="true"></div>
-      <div class="fd-container fd-pagina">
-        <header class="fd-cabecalho">
-          <img class="fd-orn fd-orn--titulo" src="/imagens/ornamentos/titulo-familia-b.svg" width="516" height="40" alt="" aria-hidden="true">
-          <h1 class="fd-h1">Santos</h1>
-          <p class="fd-cabecalho__lead">Conheça a vida de cada santo e as orações, novenas e livros ligados a ele.</p>
+    <main id="conteudo" tabindex="-1" class="conteudo-principal">
+      <div class="trilho-ornamental trilho-ornamental-da-esquerda" aria-hidden="true"></div>
+      <div class="trilho-ornamental trilho-ornamental-da-direita" aria-hidden="true"></div>
+      <div class="area-centralizada espacamento-da-pagina">
+        <header class="cabecalho-da-pagina">
+          <img class="ornamento ornamento-de-titulo" src="/imagens/ornamentos/titulo-familia-b.svg" width="516" height="40" alt="" aria-hidden="true">
+          <h1 class="titulo-da-pagina">Santos</h1>
+          <p class="texto-de-abertura-do-cabecalho">Conheça a vida de cada santo e as orações, novenas e livros ligados a ele.</p>
         </header>
-        <div class="fd-leitura" style="margin:32px auto 0">
-          <div class="fd-campo">
+        <div class="largura-de-leitura" style="margin:32px auto 0">
+          <div class="campo-de-formulario">
             <label for="busca-santo">Buscar santo</label>
-            <div class="fd-busca" role="search"><svg class="fd-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4.2-4.2"></path></svg><input id="busca-santo" class="fd-input" type="search" placeholder="Nome do santo, ex.: Tomás" autocomplete="off" spellcheck="false" aria-describedby="busca-santo-ajuda"><button type="button" class="fd-botao-icone fd-busca__limpar" aria-label="Limpar busca" data-limpar-busca hidden><svg class="fd-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
-            <span id="busca-santo-ajuda" class="fd-aux">Acentos e maiúsculas não fazem diferença.</span>
+            <div class="campo-de-busca" role="search"><svg class="icone" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4.2-4.2"></path></svg><input id="busca-santo" class="caixa-de-texto" type="search" placeholder="Nome do santo, ex.: Tomás" autocomplete="off" spellcheck="false" aria-describedby="busca-santo-ajuda"><button type="button" class="botao-de-icone botao-de-limpar-a-busca" aria-label="Limpar busca" data-limpar-busca hidden><svg class="icone" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
+            <span id="busca-santo-ajuda" class="texto-auxiliar">Acentos e maiúsculas não fazem diferença.</span>
           </div>
         </div>
         <!-- resultados da busca: preenchido pelo santos.js -->
-        <section class="fd-secao" aria-label="Resultados" id="resultados"></section>
+        <section class="secao" aria-label="Resultados" id="resultados"></section>
       </div>
     </main>
     <!-- o rodapé entra aqui (layout.js) -->

@@ -1,5 +1,5 @@
 // Desenhos dos ícones (grade 24x24), guardados como texto SVG.
-// A função icone() coloca o desenho dentro de um <svg> com a classe fd-ico.
+// A função icone() coloca o desenho dentro de um <svg> com a classe icone.
 export const Desenhos_Dos_Icones = {
   inicio: '<path d="M4 10.5L12 4l8 6.5"></path><path d="M6 9v10.5h12V9"></path><path d="M10 19.5v-5h4v5"></path>',
   hoje: '<rect x="3.5" y="5" width="17" height="15.5" rx="1.8"></rect><path d="M3.5 9.8h17M8 3.2v3.6M16 3.2v3.6"></path><path d="M12 12.6l.9 1.9 2 .3-1.45 1.4.35 2-1.8-.95-1.8.95.35-2-1.45-1.4 2-.3z" stroke-width="1.1"></path>',
@@ -36,6 +36,6 @@ export function icone(nome, { tamanho, rotulo, classe = "" } = {}) {
   const desenhoDoIcone = Desenhos_Dos_Icones[nome];
   if (!desenhoDoIcone) return "";
   const acessibilidade = rotulo ? `role="img" aria-label="${rotulo}"` : `aria-hidden="true" focusable="false"`;
-  const classes = `fd-ico ${tamanho === 24 ? "fd-ico--24" : ""} ${classe}`.trim().replace(/\s+/g, " ");
+  const classes = `icone ${tamanho === 24 ? "icone-grande" : ""} ${classe}`.trim().replace(/\s+/g, " ");
   return `<svg class="${classes}" viewBox="0 0 24 24" ${acessibilidade}>${desenhoDoIcone}</svg>`;
 }
