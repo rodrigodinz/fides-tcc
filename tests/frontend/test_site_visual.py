@@ -44,7 +44,7 @@ def test_todas_as_imagens_e_ornamentos_carregam(site, endereco):
     imagens_quebradas = pagina.evaluate(
         "[...document.images].filter((imagem) => !imagem.complete || imagem.naturalWidth === 0).map((imagem) => imagem.src)")
     assert imagens_quebradas == []
-    assert pagina.locator("img.fd-orn").count() >= 1, "a página ficou sem ornamento dourado"
+    assert pagina.locator("img.ornamento").count() >= 1, "a página ficou sem ornamento dourado"
 
 
 def test_ornamentos_de_fundo_do_css_existem(site):
@@ -87,17 +87,17 @@ def test_sem_rolagem_lateral_no_celular(site_no_celular, endereco):
 
 def test_navbar_some_ao_rolar_para_baixo_e_volta_ao_subir(site):
     pagina = site.abrir("/oracoes.html")
-    navbar = pagina.locator(".fd-navbar")
+    navbar = pagina.locator(".navbar")
     pagina.mouse.wheel(0, 900)
-    pagina.wait_for_function("document.querySelector('.fd-navbar').classList.contains('is-escondida')")
+    pagina.wait_for_function("document.querySelector('.navbar').classList.contains('navbar-quando-escondida')")
     pagina.mouse.wheel(0, -300)
-    pagina.wait_for_function("!document.querySelector('.fd-navbar').classList.contains('is-escondida')")
+    pagina.wait_for_function("!document.querySelector('.navbar').classList.contains('navbar-quando-escondida')")
     assert navbar.is_visible()
 
 
 def test_cards_em_destaque_tem_os_cantos_dourados(site):
     pagina = site.abrir("/novenas.html")
-    assert pagina.locator(".fd-card--destaque .fd-card__cantos").count() >= 1
+    assert pagina.locator(".card-de-destaque .cantos-ornamentais-do-card").count() >= 1
 
 
 @pytest.fixture(scope="module")

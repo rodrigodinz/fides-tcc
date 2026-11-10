@@ -32,22 +32,22 @@ def test_cada_pagina_carrega_o_seu_conteudo(site, endereco, texto_esperado):
 
 def test_navbar_e_menu_marcam_a_pagina_atual(site):
     pagina = site.abrir("/santo.html?id=2")
-    assert pagina.locator('.fd-navbar__link[aria-current="page"]').inner_text() == "Santos"
-    assert pagina.locator('#fd-menu a[aria-current="page"]').text_content() == "Santos"
+    assert pagina.locator('.link-da-navbar[aria-current="page"]').inner_text() == "Santos"
+    assert pagina.locator('#menu-lateral a[aria-current="page"]').text_content() == "Santos"
     pagina = site.abrir("/liturgia-horas.html")
-    assert pagina.locator('#fd-menu a[aria-current="page"]').text_content() == "Liturgia das Horas"
+    assert pagina.locator('#menu-lateral a[aria-current="page"]').text_content() == "Liturgia das Horas"
 
 
 def test_menu_lateral_abre_fecha_com_esc_e_devolve_o_foco(site):
     pagina = site.abrir("/")
     botao_menu = pagina.get_by_role("button", name="Abrir menu")
     botao_menu.click()
-    assert pagina.locator("#fd-menu").get_attribute("aria-hidden") == "false"
+    assert pagina.locator("#menu-lateral").get_attribute("aria-hidden") == "false"
     assert botao_menu.get_attribute("aria-expanded") == "true"
     pagina.wait_for_function("document.activeElement?.getAttribute('aria-label') === 'Fechar menu'")
-    assert "fd-sem-rolagem" in pagina.locator("body").get_attribute("class")
+    assert "pagina-sem-rolagem" in pagina.locator("body").get_attribute("class")
     pagina.keyboard.press("Escape")
-    assert pagina.locator("#fd-menu").get_attribute("aria-hidden") == "true"
+    assert pagina.locator("#menu-lateral").get_attribute("aria-hidden") == "true"
     pagina.wait_for_function("document.activeElement?.getAttribute('aria-label') === 'Abrir menu'")
 
 
@@ -57,7 +57,7 @@ def test_foco_fica_preso_dentro_do_menu_aberto(site):
     pagina.wait_for_function("document.activeElement?.getAttribute('aria-label') === 'Fechar menu'")
     for _ in range(12):
         pagina.keyboard.press("Tab")
-        assert pagina.evaluate("document.getElementById('fd-menu').contains(document.activeElement)")
+        assert pagina.evaluate("document.getElementById('menu-lateral').contains(document.activeElement)")
 
 
 def test_busca_de_santos_grava_na_url_e_filtra(site):
@@ -65,7 +65,7 @@ def test_busca_de_santos_grava_na_url_e_filtra(site):
     pagina.get_by_label("Buscar santo").fill("agostinho")
     pagina.wait_for_url("**/santos.html?nome=agostinho")
     pagina.get_by_text("1 santo para “agostinho”").wait_for()
-    assert pagina.locator(".fd-card-santo").count() == 1
+    assert pagina.locator(".card-do-santo").count() == 1
     pagina.get_by_role("button", name="Limpar busca").first.click()
     pagina.wait_for_url("**/santos.html")
     pagina.get_by_text("5 santos").wait_for()
@@ -84,26 +84,26 @@ def test_card_de_oracao_longa_abre_e_recolhe(site):
     pagina = site.abrir("/oracoes.html")
     botao = pagina.locator("[data-alternar-oracao]").first
     texto = pagina.locator(f"#{botao.get_attribute('aria-controls')}")
-    assert "is-recolhido" in texto.get_attribute("class")
+    assert "texto-da-oracao-recolhido" in texto.get_attribute("class")
     botao.click()
     assert botao.get_attribute("aria-expanded") == "true"
-    assert "is-recolhido" not in texto.get_attribute("class")
+    assert "texto-da-oracao-recolhido" not in texto.get_attribute("class")
     assert botao.inner_text() == "Recolher"
 
 
 def test_novena_abre_no_dia_atual_da_agenda(site):
     pagina = site.abrir("/novena.html?id=1")
-    assert pagina.locator(".fd-dia-x").inner_text().replace("\n", " ").startswith("Dia")
-    dia_atual = pagina.locator(".fd-dia.is-hoje .fd-dia__circulo").inner_text()
-    assert pagina.locator(".fd-dia.is-selecionado .fd-dia__circulo").inner_text() == dia_atual
+    assert pagina.locator(".dia-atual-em-destaque").inner_text().replace("\n", " ").startswith("Dia")
+    dia_atual = pagina.locator(".dia-de-hoje .circulo-do-dia").inner_text()
+    assert pagina.locator(".dia-selecionado .circulo-do-dia").inner_text() == dia_atual
     assert f"Reflexão do dia {dia_atual}" in pagina.locator("main").inner_text()
 
 
 def test_marcar_dia_rezado_mostra_aviso_e_marca_o_calendario(site):
     pagina = site.abrir("/novena.html?id=2&dia=4")
     pagina.get_by_label("Rezei o dia 4").check()
-    pagina.locator(".fd-toast", has_text="Dia 4 marcado como rezado neste dispositivo.").wait_for()
-    assert "is-marcado" in pagina.locator(".fd-dia").nth(3).get_attribute("class")
+    pagina.locator(".aviso-rapido", has_text="Dia 4 marcado como rezado neste dispositivo.").wait_for()
+    assert "dia-marcado" in pagina.locator(".dia-do-calendario").nth(3).get_attribute("class")
     assert pagina.get_by_text("Você marcou 1 de 9 dias.").is_visible()
     assert json.loads(pagina.evaluate("localStorage.getItem('fides:v1:novena:2')"))["marcados"] == [4]
 
@@ -113,16 +113,16 @@ def test_pedidos_sao_guardados_e_apagados_com_confirmacao(site):
     pagina.get_by_label("Meus pedidos").fill("Pela minha família")
     assert pagina.get_by_text("18/4000 caracteres").is_visible()
     pagina.get_by_role("button", name="Guardar pedidos").click()
-    pagina.locator(".fd-toast", has_text="Pedidos guardados neste dispositivo.").wait_for()
+    pagina.locator(".aviso-rapido", has_text="Pedidos guardados neste dispositivo.").wait_for()
     pagina.get_by_role("button", name="Apagar pedidos").click()
-    modal = pagina.get_by_role("alertdialog")
-    assert modal.get_by_text("Apagar seus pedidos desta novena?").is_visible()
+    janelaDeConfirmacao = pagina.get_by_role("alertdialog")
+    assert janelaDeConfirmacao.get_by_text("Apagar seus pedidos desta novena?").is_visible()
     pagina.keyboard.press("Escape")  # Esc cancela
     assert pagina.get_by_role("alertdialog").count() == 0
     assert pagina.get_by_label("Meus pedidos").input_value() == "Pela minha família"
     pagina.get_by_role("button", name="Apagar pedidos").click()
     pagina.get_by_role("alertdialog").get_by_role("button", name="Apagar pedidos").click()
-    pagina.locator(".fd-toast", has_text="Pedidos apagados deste dispositivo.").wait_for()
+    pagina.locator(".aviso-rapido", has_text="Pedidos apagados deste dispositivo.").wait_for()
     assert pagina.get_by_label("Meus pedidos").input_value() == ""
     assert pagina.evaluate("localStorage.getItem('fides:v1:novena:2')") is None
 
@@ -133,7 +133,7 @@ def test_seletor_de_data_troca_a_liturgia_e_volta_para_hoje(site):
     pagina.get_by_role("button", name="Próximo dia").click()
     pagina.wait_for_url(f"**/liturgia.html?data={amanha}")
     pagina.get_by_role("button", name="Voltar para hoje").wait_for()
-    assert pagina.locator("main a.fd-aba").first.get_attribute("href") == f"/liturgia.html?data={amanha}"
+    assert pagina.locator("main a.aba").first.get_attribute("href") == f"/liturgia.html?data={amanha}"
     pagina.get_by_role("button", name="Voltar para hoje").click()
     pagina.wait_for_url("**/liturgia.html")
 
@@ -148,7 +148,7 @@ def test_data_fora_do_periodo_volta_para_hoje(site):
 def test_visitar_um_santo_gera_recomendacao_de_livros(site):
     site.abrir("/santo.html?id=2")
     pagina = site.abrir("/livros.html")
-    assert pagina.locator("#livros-recomendados .fd-card").count() >= 1
+    assert pagina.locator("#livros-recomendados .card").count() >= 1
     pagina = site.abrir("/")
     pagina.get_by_role("heading", name="Para continuar a leitura").wait_for()
 

@@ -120,7 +120,7 @@ def test_oracoes_sem_imagens_e_filtro_usa_momento_id(site):
     site.responder_api("/oracoes?", pagina_de([{"id": 1, "titulo": "Pai Nosso", "texto": "Pai nosso...", "basica": True, "santo": None, "momentos": []}]))
     pagina = site.abrir("/oracoes.html")
     assert pagina.get_by_role("heading", name="Pai Nosso").is_visible()
-    assert pagina.locator(".fd-oracao img").count() == 0
+    assert pagina.locator(".oracao img").count() == 0
     pagina.get_by_role("button", name="Antes de dormir").click()
     pagina.get_by_role("button", name="Antes de dormir", pressed=True).wait_for()
     assert any("/oracoes?" in url and "momento_id=4" in url for url in site.chamadas_a_api)
