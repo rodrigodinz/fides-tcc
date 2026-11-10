@@ -1,5 +1,12 @@
 SQLAlchemy>=2.0
+pytest>=8.0
 
 # API REST
 fastapi>=0.110
 uvicorn[standard]>=0.29
+
+# Testes da API (TestClient)
+httpx>=0.27
+
+# Testes do site (abrem as páginas no Chromium; depois: python -m playwright install chromium)
+playwright>=1.40

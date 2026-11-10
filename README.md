@@ -10,9 +10,13 @@ database/
                   + MomentoDia (enum MomentoDoDia) e Administrador (autenticação)
   seeds.py        carga inicial idempotente
 api/              API REST (FastAPI): main.py, config.py, errors.py, routes/, schemas/, services/
+tests/test_models.py   testes do banco
+tests/api/        testes da API (sem __init__.py)
+tests/frontend/   testes do site (Playwright)
 frontend/         site: páginas .html, css/, js/, fontes/, imagens/ (ver "Fides — Front-end" abaixo)
 docs/API.md       contrato da API
 static/santos/    imagens dos santos (foto_url)
+scripts/medir_desempenho.py
 ```
 O arquivo SQLite fica por padrão em `database.db`, na raiz do repositório (ignorado pelo git).
 Para outro local: `FIDES_DATABASE_URL` (ex.: `sqlite:///C:/dados/fides.db`).
@@ -26,6 +30,7 @@ python -m venv .venv
 source .venv/bin/activate             # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 python -m database.seeds              # cria as tabelas (se faltarem) e popula
+python -m pytest tests/test_models.py -q   # testes do banco (usam banco em memória; não tocam no database.db)
 ```
 Para um banco que ainda não existe, o comando normal basta: ele cria o arquivo, as tabelas e os dados.
 
@@ -158,6 +163,20 @@ python -m database.seeds --data-referencia 2026-11-25
 ```
 
 Com a referência em 25/11, a liturgia cobre de 18/11 a 02/12. Na data de referência, a novena de Santa Teresinha está no dia 5, a de Santa Teresa d'Ávila no dia 1, e a de Santo Agostinho começa dois dias depois. Detalhes em `docs/API.md` (seção 9).
+
+### Testes
+
+```bash
+pip install -r requirements.txt
+python -m playwright install chromium   # navegador usado pelos testes do site (só na primeira vez)
+python -m pytest                        # banco + API + site
+python -m pytest tests/api              # somente a API
+python -m pytest tests/frontend         # somente o site
+```
+
+Os testes usam bancos SQLite temporários e nunca tocam o `database.db`. A pasta `tests/api/` **não** deve ter `__init__.py`, porque isso conflita com o pacote `api`.
+Os testes do site sobem a API e o site de verdade numa porta livre e abrem as páginas no Chromium (Playwright). Sem o Playwright instalado, eles são pulados.
+Para guardar as capturas de tela de todas as páginas (computador e celular): `FIDES_PASTA_CAPTURAS=capturas python -m pytest tests/frontend/test_site_visual.py`.
 
 ---
 
