@@ -1,0 +1,362 @@
+// Peças visuais reaproveitadas pelas páginas. Cada função devolve um TEXTO de HTML
+// com as classes "fd-..." do CSS; a página junta esses textos e coloca na tela com innerHTML.
+// Textos vindos da API sempre passam por escaparHtml().
+import { escaparHtml, gerarId } from "./html.js";
+import { icone } from "./icones.js";
+import { montarUrlDaImagem } from "../api/cliente.js";
+import { montarMensagemDeErro, ehErroRecuperavel } from "../api/erros.js";
+import { enderecos } from "../utils/enderecos.js";
+import { escreverDataCurta, escreverDataPorExtenso, somarDias } from "../utils/datas.js";
+import { descreverAgendaDaNovena } from "../utils/novena.js";
+import { calcularPaginasVisiveis } from "../utils/paginacao.js";
+
+const juntarClasses = (...classes) => classes.filter(Boolean).join(" ");
+
+// ---------------------------------------------------------------- ornamentos
+const Arquivos_Dos_Ornamentos = {
+  crista: "/imagens/ornamentos/crista-acanto-familia-b.svg",
+  titulo: "/imagens/ornamentos/titulo-familia-b.svg",
+  divisor: "/imagens/ornamentos/divisor-familia-a.svg",
+  curto: "/imagens/ornamentos/divisor-curto-familia-a.svg",
+};
+const Dimensoes_Dos_Ornamentos = { crista: [372, 60], titulo: [516, 40], divisor: [464, 26], curto: [200, 20] };
+
+// ornamentos dourados são só decoração: alt="" e aria-hidden para o leitor de tela pular
+export function ornamento(tipo = "divisor", classe = "") {
+  const [largura, altura] = Dimensoes_Dos_Ornamentos[tipo];
+  return `<img class="${`fd-orn fd-orn--${tipo} ${classe}`.trim()}" src="${Arquivos_Dos_Ornamentos[tipo]}" width="${largura}" height="${altura}" alt="" aria-hidden="true">`;
+}
+
+// ---------------------------------------------------------------- botões
+const montarClassesDoBotao = (variante, pequeno, classe) =>
+  `fd-btn fd-btn--${variante}${pequeno ? " fd-btn--pequeno" : ""} ${classe}`.trim();
+
+// variante muda a cor: primario, secundario, especial ou texto; "atributos" recebe extras como data-acao="..."
+export function botao({ texto, variante = "primario", icone: nomeDoIcone, iconeDepois, pequeno, classe = "", atributos = "" }) {
+  return `<button type="button" class="${montarClassesDoBotao(variante, pequeno, classe)}" ${atributos}>${nomeDoIcone ? icone(nomeDoIcone) : ""}${escaparHtml(texto)}${iconeDepois ? icone(iconeDepois) : ""}</button>`;
+}
+
+// mesmo visual do botão, mas é um link para outra página
+export function botaoLink({ texto, para, variante = "primario", icone: nomeDoIcone, iconeDepois, pequeno, classe = "" }) {
+  return `<a class="${montarClassesDoBotao(variante, pequeno, classe)}" href="${para}">${nomeDoIcone ? icone(nomeDoIcone) : ""}${escaparHtml(texto)}${iconeDepois ? icone(iconeDepois) : ""}</a>`;
+}
+
+// ---------------------------------------------------------------- cards
+// Caixa de conteúdo usada em todo o site. destaque = card dourado; simples = sem moldura;
+// para = link do título (o card inteiro fica clicável); corpo e acoes já vêm como HTML pronto.
+export function card({ titulo, nivel = 3, para, rotulo, meta, corpo = "", acoes, destaque, simples, classe = "" }) {
+  const tagDoTitulo = `h${nivel}`;
+  const tituloDoCard = titulo
+    ? `<${tagDoTitulo} class="fd-card__titulo"${rotulo ? ' style="margin-top:4px"' : ""}>${para ? `<a class="fd-card__link-total" href="${para}">${escaparHtml(titulo)}</a>` : escaparHtml(titulo)}</${tagDoTitulo}>`
+    : "";
+  return `<article class="${juntarClasses("fd-card", destaque && "fd-card--destaque", simples && "fd-card--simples", classe)}">`
+    + (destaque ? '<span class="fd-card__cantos" aria-hidden="true"></span>' : "")
+    + (rotulo ? `<p class="fd-rotulo">${escaparHtml(rotulo)}</p>` : "")
+    + tituloDoCard
+    + (meta ? `<p class="fd-aux fd-card__meta">${escaparHtml(meta)}</p>` : "")
+    + corpo
+    + (acoes ? `<div class="fd-card__acoes fd-card__acima">${acoes}</div>` : "")
+    + "</article>";
+}
+
+// foto do santo; se a imagem faltar ou não carregar, aparece o símbolo do Fides (ver tratarImagemQuebrada)
+export function retratoSanto({ fotoUrl, nome, decorativo = false, classe = "", carregamento = "lazy" }) {
+  const urlDaImagem = montarUrlDaImagem(fotoUrl);
+  const conteudo = urlDaImagem
+    ? `<img src="${escaparHtml(urlDaImagem)}" alt="${decorativo ? "" : `Retrato de ${escaparHtml(nome)}`}" width="400" height="500" loading="${carregamento}" decoding="async" data-retrato-de="${escaparHtml(nome)}" data-decorativo="${decorativo}">`
+    : retratoIndisponivel(nome, decorativo);
+  return `<div class="${`fd-retrato ${classe}`.trim()}">${conteudo}</div>`;
+}
+
+export function retratoIndisponivel(nome, decorativo) {
+  const acessibilidade = decorativo ? "" : ` role="img" aria-label="Retrato de ${escaparHtml(nome)} não disponível"`;
+  return `<div class="fd-retrato__vazio"${acessibilidade}><img src="/imagens/simbolo-fides.svg" alt="" width="44" height="57"><span aria-hidden="true">Retrato não disponível</span></div>`;
+}
+
+// card do santo com retrato; o link no nome cobre o card inteiro (classe fd-card__link-total)
+export function cardSanto(santo, nivel = 3) {
+  return `<article class="fd-card fd-card-santo">${retratoSanto({ fotoUrl: santo.foto_url, nome: santo.nome, decorativo: true })}`
+    + `<div class="fd-card-santo__corpo"><h${nivel} class="fd-card-santo__nome"><a class="fd-card__link-total" href="${enderecos.santo(santo.id)}">${escaparHtml(santo.nome)}</a></h${nivel}>`
+    + `<span class="fd-card-santo__mais" aria-hidden="true">Ver vida e devoções ${icone("direita")}</span></div></article>`;
+}
+
+// card da novena; em andamento ganha destaque e botão para ler o dia atual
+export function cardNovena(novena, nivel = 2) {
+  const situacaoDaAgenda = descreverAgendaDaNovena(novena.agenda, novena.total_dias);
+  const novenaEmAndamento = situacaoDaAgenda.tipo === "em_andamento";
+  const informacoesDoCard = [novena.santo?.nome, situacaoDaAgenda.tipo === "agendada" ? situacaoDaAgenda.texto : null].filter(Boolean).join(" · ");
+  return card({
+    destaque: novenaEmAndamento, nivel, titulo: novena.titulo, para: enderecos.novena(novena.id),
+    rotulo: novenaEmAndamento ? `${situacaoDaAgenda.rotulo} · ${situacaoDaAgenda.texto}` : situacaoDaAgenda.rotulo,
+    meta: informacoesDoCard || null,
+    acoes: novenaEmAndamento
+      ? botaoLink({ variante: "especial", texto: `Ler o dia ${situacaoDaAgenda.diaAtual}`, para: enderecos.novena(novena.id, situacaoDaAgenda.diaAtual) })
+      : null,
+    corpo: novena.descricao ? `<p class="fd-card__corpo-texto">${escaparHtml(novena.descricao)}</p>` : "",
+  });
+}
+
+const Tamanho_De_Texto_Longo = 220;
+
+// card da oração; texto longo começa recolhido e o botão "Ler a oração inteira" abre (ver ligarCardsDeOracao)
+export function cardOracao(oracao, nivel = 3) {
+  const idDoTexto = gerarId("oracao");
+  const textoLongo = oracao.texto.length > Tamanho_De_Texto_Longo;
+  const informacoesDaOracao = [oracao.basica ? "Oração básica" : null, oracao.santo?.nome].filter(Boolean).join(" · ");
+  const temMomentos = oracao.momentos?.length > 0;
+  let rodape = "";
+  if (textoLongo || temMomentos) {
+    const etiquetas = temMomentos
+      ? `<ul class="fd-etiquetas" aria-label="Momentos do dia">${oracao.momentos.map((momento) => `<li class="fd-etiqueta">${escaparHtml(momento.nome)}</li>`).join("")}</ul>`
+      : "<span></span>";
+    const botaoAbrir = textoLongo
+      ? botao({ variante: "texto", pequeno: true, texto: "Ler a oração inteira", atributos: `aria-expanded="false" aria-controls="${idDoTexto}" data-alternar-oracao` })
+      : "";
+    rodape = `<div class="fd-oracao__rodape">${etiquetas}${botaoAbrir}</div>`;
+  }
+  return card({
+    simples: true, titulo: oracao.titulo, nivel, meta: informacoesDaOracao || null, classe: "fd-oracao",
+    corpo: `<p id="${idDoTexto}" class="fd-oracao__texto fd-texto-longo${textoLongo ? " is-recolhido" : ""}">${escaparHtml(oracao.texto)}</p>${rodape}`,
+  });
+}
+
+export function ligarCardsDeOracao(container) {
+  container.querySelectorAll("[data-alternar-oracao]").forEach((botaoDaOracao) => {
+    botaoDaOracao.addEventListener("click", () => {
+      const textoDaOracao = document.getElementById(botaoDaOracao.getAttribute("aria-controls"));
+      const vaiAbrir = botaoDaOracao.getAttribute("aria-expanded") !== "true";
+      botaoDaOracao.setAttribute("aria-expanded", String(vaiAbrir));
+      botaoDaOracao.textContent = vaiAbrir ? "Recolher" : "Ler a oração inteira";
+      textoDaOracao.classList.toggle("is-recolhido", !vaiAbrir);
+    });
+  });
+}
+
+// ---------------------------------------------------------------- estados da consulta
+export function alerta({ tipo = "info", titulo, corpo = "", acoes, papel }) {
+  const nomeDoIcone = tipo === "erro" ? "alerta" : tipo === "sucesso" ? "check" : "info";
+  const papelAcessivel = papel ?? (tipo === "erro" ? "alert" : "status");
+  return `<div class="fd-alerta fd-alerta--${tipo}" role="${papelAcessivel}">${icone(nomeDoIcone)}<div>`
+    + (titulo ? `<strong class="fd-alerta__titulo">${escaparHtml(titulo)}</strong>` : "")
+    + corpo
+    + (acoes ? `<div class="fd-alerta__acoes">${acoes}</div>` : "")
+    + "</div></div>";
+}
+
+// mensagem de erro amigável; "Tentar novamente" só aparece em erros que podem passar (rede, servidor)
+// o botão tem data-acao="tentar-novamente": quem desenha o erro liga o clique com ligarTentarNovamente()
+export function estadoErro({ erro, conteudoBuscado, comTentarNovamente = true, acaoExtra = "" }) {
+  const { titulo, texto } = montarMensagemDeErro(erro, conteudoBuscado);
+  const podeTentarNovamente = comTentarNovamente && ehErroRecuperavel(erro);
+  const acoes = podeTentarNovamente || acaoExtra
+    ? `${podeTentarNovamente ? botao({ variante: "secundario", icone: "recarregar", texto: "Tentar novamente", atributos: 'data-acao="tentar-novamente"' }) : ""}${acaoExtra}`
+    : null;
+  return alerta({ tipo: "erro", titulo, acoes, corpo: `<p>${escaparHtml(texto)}</p>` });
+}
+
+export function ligarTentarNovamente(container, funcao) {
+  container.querySelectorAll('[data-acao="tentar-novamente"]').forEach((botaoTentar) => botaoTentar.addEventListener("click", funcao));
+}
+
+// quando a busca deu certo mas não há resultados (não é erro)
+export function estadoVazio({ titulo, texto, acao }) {
+  return `<div class="fd-vazio" role="status">${ornamento("curto")}<h3 class="fd-h4">${escaparHtml(titulo)}</h3>`
+    + (texto ? `<p class="fd-aux">${escaparHtml(texto)}</p>` : "")
+    + (acao ? `<div class="fd-vazio__acoes">${acao}</div>` : "")
+    + "</div>";
+}
+
+export function naoEncontrado({ titulo = "Conteúdo não encontrado", voltar }) {
+  return `<div class="fd-vazio">${ornamento("curto")}<h2 class="fd-h3">${escaparHtml(titulo)}</h2>`
+    + '<p class="fd-aux">O endereço pode estar incorreto ou o conteúdo não existe mais.</p>'
+    + (voltar ? `<div class="fd-vazio__acoes">${botaoLink({ variante: "secundario", icone: "esquerda", para: voltar.para, texto: voltar.texto })}</div>` : "")
+    + "</div>";
+}
+
+// esqueletos cinza enquanto os dados chegam (aria-busy avisa o leitor de tela que está carregando)
+export function carregando({ tipo = "cards", quantidade = 3, texto = "Carregando…" } = {}) {
+  const posicoes = Array.from({ length: quantidade }, (_, posicao) => posicao);
+  let esqueletos;
+  if (tipo === "texto") {
+    esqueletos = '<div class="fd-leitura" style="display:grid;gap:10px"><span class="fd-esqueleto" style="height:26px;width:55%"></span>'
+      + posicoes.map((posicao) => `<span class="fd-esqueleto" style="height:14px;width:${92 - posicao * 9}%"></span>`).join("") + "</div>";
+  } else if (tipo === "santos") {
+    esqueletos = `<div class="fd-grade fd-grade--3">${posicoes.map(() => '<span class="fd-esqueleto fd-esqueleto--retrato"></span>').join("")}</div>`;
+  } else {
+    esqueletos = `<div class="fd-grade fd-grade--2">${posicoes.map(() => '<span class="fd-esqueleto fd-esqueleto--card"></span>').join("")}</div>`;
+  }
+  return `<div aria-busy="true" role="status"><span class="fd-sr">${escaparHtml(texto)}</span>${esqueletos}</div>`;
+}
+
+// ---------------------------------------------------------------- estrutura das páginas
+// título da página com o ornamento dourado em cima
+export function cabecalhoPagina({ titulo, rotulo, textoDeAbertura, ornamento: tipoDoOrnamento = "titulo", extra = "" }) {
+  return `<header class="fd-cabecalho">${tipoDoOrnamento ? ornamento(tipoDoOrnamento) : ""}`
+    + (rotulo ? `<span class="fd-rotulo">${escaparHtml(rotulo)}</span>` : "")
+    + `<h1 class="fd-h1">${escaparHtml(titulo)}</h1>`
+    + (textoDeAbertura ? `<p class="fd-cabecalho__lead">${escaparHtml(textoDeAbertura)}</p>` : "")
+    + extra + "</header>";
+}
+
+export function tituloSecao({ titulo, id, descricao, acao = "", nivel = 2 }) {
+  return `<div class="fd-secao-titulo">${ornamento("curto")}<div class="fd-secao-titulo__linha">`
+    + `<h${nivel} class="${nivel === 2 ? "fd-h2" : "fd-h3"}"${id ? ` id="${id}"` : ""}>${escaparHtml(titulo)}</h${nivel}>${acao}</div>`
+    + (descricao ? `<p class="fd-aux">${escaparHtml(descricao)}</p>` : "")
+    + "</div>";
+}
+
+// trilha "Início · Novenas · Novena X" no topo das páginas de detalhe
+export function migalhas(itens) {
+  const itensDaTrilha = itens.map((item, posicao) => {
+    const ehUltimoItem = posicao === itens.length - 1;
+    return item.para && !ehUltimoItem
+      ? `<li><a href="${item.para}">${escaparHtml(item.texto)}</a></li>`
+      : `<li><span${ehUltimoItem ? ' aria-current="page"' : ""}>${escaparHtml(item.texto)}</span></li>`;
+  }).join("");
+  return `<nav class="fd-migalhas" aria-label="Você está em"><ol>${itensDaTrilha}</ol></nav>`;
+}
+
+// ---------------------------------------------------------------- paginação
+// botões Anterior / números / Próxima; com uma página só, não aparece nada
+export function paginacao({ pagina, totalPaginas, totalRegistros, rotulo = "Paginação" }) {
+  if (!totalPaginas || totalPaginas <= 1) return "";
+  const botoesDasPaginas = calcularPaginasVisiveis(pagina, totalPaginas).map((numeroDaPagina) =>
+    `<li><button type="button" class="fd-pag"${numeroDaPagina === pagina ? ' aria-current="page"' : ""} aria-label="Página ${numeroDaPagina}" data-pagina="${numeroDaPagina}">${numeroDaPagina}</button></li>`).join("");
+  return `<nav class="fd-paginacao" aria-label="${escaparHtml(rotulo)}"><ol>`
+    + `<li><button type="button" class="fd-pag fd-pag--seta"${pagina <= 1 ? " disabled" : ""} aria-label="Página anterior" data-pagina="${pagina - 1}">${icone("esquerda")}<span>Anterior</span></button></li>`
+    + botoesDasPaginas
+    + `<li><button type="button" class="fd-pag fd-pag--seta"${pagina >= totalPaginas ? " disabled" : ""} aria-label="Próxima página" data-pagina="${pagina + 1}"><span>Próxima</span>${icone("direita")}</button></li>`
+    + "</ol>"
+    + (typeof totalRegistros === "number"
+      ? `<p class="fd-aux fd-paginacao__resumo">Página ${pagina} de ${totalPaginas} · ${totalRegistros} ${totalRegistros === 1 ? "item" : "itens"}</p>`
+      : "")
+    + "</nav>";
+}
+
+export function ligarPaginacao(container, aoMudarPagina) {
+  container.querySelectorAll(".fd-paginacao [data-pagina]").forEach((botaoDaPagina) => {
+    botaoDaPagina.addEventListener("click", () => {
+      if (botaoDaPagina.getAttribute("aria-current") === "page") return;
+      aoMudarPagina(Number(botaoDaPagina.dataset.pagina));
+    });
+  });
+}
+
+// ---------------------------------------------------------------- seletor de data (liturgia e agenda)
+// dia anterior / calendário / próximo dia, travado no período que a API informou (hoje ± 7)
+export function seletorData({ data, periodo }) {
+  if (!periodo) return "";
+  const idDoCampo = gerarId("data");
+  const diaAnterior = somarDias(data, -1);
+  const proximoDia = somarDias(data, 1);
+  const voltarParaHoje = data !== periodo.hoje
+    ? ' <button type="button" class="fd-btn fd-btn--texto fd-btn--pequeno" data-ir-para-data="' + periodo.hoje + '">Voltar para hoje</button>'
+    : "";
+  return '<div class="fd-seletor-data">'
+    + botao({ variante: "secundario", icone: "esquerda", texto: escreverDataCurta(diaAnterior), atributos: `${diaAnterior < periodo.inicio ? "disabled" : ""} aria-label="Dia anterior (${escreverDataCurta(diaAnterior)})" data-ir-para-data="${diaAnterior}"` })
+    + `<div class="fd-campo"><label for="${idDoCampo}">Escolher data</label><input id="${idDoCampo}" class="fd-input" type="date" value="${data}" min="${periodo.inicio}" max="${periodo.fim}" data-campo-de-data></div>`
+    + botao({ variante: "secundario", iconeDepois: "direita", texto: escreverDataCurta(proximoDia), atributos: `${proximoDia > periodo.fim ? "disabled" : ""} aria-label="Próximo dia (${escreverDataCurta(proximoDia)})" data-ir-para-data="${proximoDia}"` })
+    + `<p class="fd-aux fd-seletor-data__janela">Período disponível: ${escreverDataCurta(periodo.inicio)} a ${escreverDataCurta(periodo.fim)} (hoje ± 7 dias).${voltarParaHoje}</p>`
+    + "</div>";
+}
+
+export function ligarSeletorData(container, aoMudarData) {
+  container.querySelectorAll("[data-ir-para-data]").forEach((botaoDeData) =>
+    botaoDeData.addEventListener("click", () => aoMudarData(botaoDeData.dataset.irParaData)));
+  container.querySelectorAll("[data-campo-de-data]").forEach((campoDeData) =>
+    campoDeData.addEventListener("change", () => { if (campoDeData.value) aoMudarData(campoDeData.value); }));
+}
+
+// ---------------------------------------------------------------- calendário da novena
+// Os 9 dias em círculos. Cada dia pode estar: hoje (agenda), marcado (rezado neste aparelho)
+// ou selecionado (aberto na tela). O aria-label é o texto que o leitor de tela lê.
+export function calendarioNovena({ novenaId, dias, diaAtual, marcados = [], diaSelecionado, comLegenda = true }) {
+  const itensDoCalendario = dias.map((dia) => {
+    const ehHoje = diaAtual === dia.numero_do_dia;
+    const estaMarcado = marcados.includes(dia.numero_do_dia);
+    const estaSelecionado = diaSelecionado === dia.numero_do_dia;
+    const descricaoAcessivel = [
+      `Dia ${dia.numero_do_dia}`,
+      dia.data ? escreverDataCurta(dia.data) : null,
+      ehHoje ? "dia atual da agenda" : null,
+      estaMarcado ? "marcado como rezado neste dispositivo" : null,
+      estaSelecionado ? "aberto" : null,
+    ].filter(Boolean).join(", ");
+    return `<li class="${juntarClasses("fd-dia", ehHoje && "is-hoje", estaMarcado && "is-marcado", estaSelecionado && "is-selecionado")}">`
+      + `<a class="fd-dia__circulo" href="${enderecos.novena(novenaId, dia.numero_do_dia)}" aria-label="${descricaoAcessivel}"${estaSelecionado ? ' aria-current="step"' : ""}>${dia.numero_do_dia}</a>`
+      + `<span class="fd-dia__data" aria-hidden="true">${dia.data ? escreverDataCurta(dia.data) : "—"}</span>`
+      + `<span class="fd-dia__hoje" aria-hidden="true">${ehHoje ? "Hoje" : ""}</span></li>`;
+  }).join("");
+  const legenda = comLegenda
+    ? '<ul class="fd-legenda" aria-label="Legenda"><li><i class="h"></i>Dia atual (agenda da novena)</li><li><i class="m"></i>Rezado (marcado neste dispositivo)</li><li><i class="s"></i>Dia aberto</li><li><i></i>Demais dias</li></ul>'
+    : "";
+  return `<ol class="fd-calendario" aria-label="Os nove dias da novena">${itensDoCalendario}</ol>${legenda}`;
+}
+
+// ---------------------------------------------------------------- campos de formulário
+// campo de busca; o botão de limpar só aparece quando há texto (a página controla com hidden)
+export function campoBusca({ rotulo, valor = "", placeholder = "", ajuda, id }) {
+  const idDoCampo = id ?? gerarId("busca");
+  return `<div class="fd-campo"><label for="${idDoCampo}">${escaparHtml(rotulo)}</label><div class="fd-busca" role="search">${icone("lupa")}`
+    + `<input id="${idDoCampo}" class="fd-input" type="search" value="${escaparHtml(valor)}" placeholder="${escaparHtml(placeholder)}" autocomplete="off" spellcheck="false"${ajuda ? ` aria-describedby="${idDoCampo}-ajuda"` : ""}>`
+    + `<button type="button" class="fd-botao-icone fd-busca__limpar" aria-label="Limpar busca" data-limpar-busca${valor ? "" : " hidden"}>${icone("fechar")}</button></div>`
+    + (ajuda ? `<span id="${idDoCampo}-ajuda" class="fd-aux">${escaparHtml(ajuda)}</span>` : "")
+    + "</div>";
+}
+
+// caixa de seleção (select) usada nos filtros por santo e por tipo
+export function seletor({ rotulo, valor = "", opcoes, textoDeTodos = "Todos", desabilitado, id }) {
+  const idDoCampo = id ?? gerarId("sel");
+  const opcoesDoSeletor = opcoes.map((opcao) =>
+    `<option value="${escaparHtml(opcao.valor)}"${String(opcao.valor) === String(valor) ? " selected" : ""}>${escaparHtml(opcao.rotulo)}</option>`).join("");
+  return `<div class="fd-campo"><label for="${idDoCampo}">${escaparHtml(rotulo)}</label>`
+    + `<select id="${idDoCampo}" class="fd-select"${desabilitado ? " disabled" : ""}><option value="">${escaparHtml(textoDeTodos)}</option>${opcoesDoSeletor}</select></div>`;
+}
+
+// botões liga/desliga (momentos do dia); aria-pressed diz ao leitor de tela se está ligado
+export function chips({ rotulo, valor = "", opcoes }) {
+  const idDoRotulo = gerarId("chips");
+  const botoesDosChips = opcoes.map((opcao) => {
+    const chipAtivo = String(valor) === String(opcao.valor);
+    return `<button type="button" class="fd-chip" aria-pressed="${chipAtivo}" data-valor="${escaparHtml(opcao.valor)}">${opcao.icone ? icone(opcao.icone) : ""}${escaparHtml(opcao.rotulo)}</button>`;
+  }).join("");
+  return `<div class="fd-campo"><span class="fd-campo__rotulo" id="${idDoRotulo}">${escaparHtml(rotulo)}</span>`
+    + `<div class="fd-chips" role="group" aria-labelledby="${idDoRotulo}">${botoesDosChips}</div></div>`;
+}
+
+// ---------------------------------------------------------------- liturgia
+const Abas_Da_Liturgia = [
+  { para: "/liturgia.html", montarEndereco: enderecos.liturgiaDoDia, nome: "Liturgia do Dia", icone: "liturgia" },
+  { para: "/liturgia-horas.html", montarEndereco: enderecos.liturgiaDasHoras, nome: "Liturgia das Horas", icone: "horas" },
+];
+
+// abas Liturgia do Dia / Liturgia das Horas, levando junto a data escolhida
+export function abasLiturgia(data) {
+  const abas = Abas_Da_Liturgia.map((aba) =>
+    `<li><a class="fd-aba" href="${aba.montarEndereco(data)}"${window.location.pathname === aba.para ? ' aria-current="page"' : ""}>${icone(aba.icone)}${aba.nome}</a></li>`).join("");
+  return `<nav aria-label="Liturgia"><ul class="fd-abas">${abas}</ul></nav>`;
+}
+
+export function avisoDemonstracao(texto) {
+  return alerta({ tipo: "aviso", titulo: "Conteúdo de demonstração", papel: "note", corpo: `<p>${escaparHtml(texto)}</p>` });
+}
+
+const Codigos_De_Erro_De_Data = ["DATA_FORA_DO_INTERVALO", "LITURGIA_NAO_CADASTRADA", "PARAMETRO_INVALIDO"];
+
+// erros de data (fora do período, sem liturgia) oferecem "Ir para hoje" em vez de "Tentar novamente"
+export function erroDeData(erro) {
+  const { titulo, texto } = montarMensagemDeErro(erro);
+  if (Codigos_De_Erro_De_Data.includes(erro?.codigo)) {
+    const dataInvalida = erro.codigo === "PARAMETRO_INVALIDO";
+    return alerta({
+      tipo: "info", titulo: dataInvalida ? "Data inválida." : titulo,
+      acoes: botao({ variante: "secundario", icone: "calendario", texto: "Ir para hoje", atributos: 'data-acao="ir-para-hoje"' }),
+      corpo: `<p>${escaparHtml(dataInvalida ? "Use uma data no formato do calendário." : texto)}</p>`,
+    });
+  }
+  return alerta({
+    tipo: "erro", titulo,
+    acoes: botao({ variante: "secundario", icone: "recarregar", texto: "Tentar novamente", atributos: 'data-acao="tentar-novamente"' }),
+    corpo: `<p>${escaparHtml(texto)}</p>`,
+  });
+}

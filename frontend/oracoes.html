@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Fides: santos, orações, novenas, livros e liturgia em um só lugar.">
+  <meta name="theme-color" content="#EEE8DC">
+  <link rel="icon" type="image/svg+xml" href="/imagens/simbolo-fides.svg">
+  <title>Orações · Fides</title>
+  <!-- estilos: fontes, cores e medidas (tokens), base, componentes e páginas -->
+  <link rel="stylesheet" href="/css/fontes.css">
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/componentes.css">
+  <link rel="stylesheet" href="/css/paginas.css">
+  <!-- type="module": o script pode usar import/export e só roda depois que o HTML terminou de carregar -->
+  <script type="module" src="/js/paginas/oracoes.js"></script>
+</head>
+<!-- Orações com filtros (oracoes.html?momento=...&santo=...&tipo=...) -->
+<!-- data-modulo diz qual link do menu fica marcado como página atual -->
+<body data-modulo="oracoes">
+  <div class="fd-app">
+    <a href="#conteudo" class="fd-pular">Pular para o conteúdo</a>
+    <!-- a navbar e o menu lateral entram aqui (layout.js) -->
+    <main id="conteudo" tabindex="-1" class="fd-principal">
+      <div class="fd-trilho fd-trilho--esq" aria-hidden="true"></div>
+      <div class="fd-trilho fd-trilho--dir" aria-hidden="true"></div>
+      <div class="fd-container fd-pagina">
+        <header class="fd-cabecalho">
+          <img class="fd-orn fd-orn--titulo" src="/imagens/ornamentos/titulo-familia-b.svg" width="516" height="40" alt="" aria-hidden="true">
+          <h1 class="fd-h1">Orações</h1>
+          <p class="fd-cabecalho__lead">Orações para cada momento do dia, para rezar e ler por inteiro.</p>
+        </header>
+        <!-- card "Orações básicas" (só aparece sem filtros) -->
+        <div id="destaque-basicas"></div>
+        <!-- filtros: momento do dia, santo e tipo -->
+        <section class="fd-secao" aria-labelledby="filtros-titulo" id="filtros"></section>
+        <section class="fd-secao" style="margin-top:24px" aria-label="Lista de orações" id="lista-de-oracoes"></section>
+      </div>
+    </main>
+    <!-- o rodapé entra aqui (layout.js) -->
+  </div>
+  <noscript>O Fides precisa de JavaScript habilitado para funcionar.</noscript>
+</body>
+</html>
